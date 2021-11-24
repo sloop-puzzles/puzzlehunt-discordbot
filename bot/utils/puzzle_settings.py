@@ -15,12 +15,13 @@ if "LADDER_SPOT_DATA_DIR" in os.environ:
 class GuildSettings:
     guild_id: int
     guild_name: str = ""
+    hunt_name: str = ""
     hunt_url: str = ""
-    hunt_url_sep: str = "_"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar 
+    hunt_url_sep: str = "_"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
     discord_bot_channel: str = ""   # Channel to listen for bot commands
     drive_parent_id: str = ""       # ID of root drive folder
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
-    drive_resources_id: str = ""    # Document with resources links, etc 
+    drive_resources_id: str = ""    # Document with resources links, etc
 
 
 class GuildSettingsDb:
