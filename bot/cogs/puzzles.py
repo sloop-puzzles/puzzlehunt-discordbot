@@ -18,7 +18,7 @@ class Puzzles(commands.Cog):
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
-    SOLVED_PUZZLES_CATEGORY = "SOLVED PUZZLES"
+    SOLVED_PUZZLES_CATEGORY = "solved"
     PRIORITIES = ["low", "medium", "high", "very high"]
 
     def __init__(self, bot):
@@ -567,7 +567,8 @@ class Puzzles(commands.Cog):
                 await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
 
             puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
-            puzzle.archive_channel_mention = channel.mention
+            if channel:
+                puzzle.archive_channel_mention = channel.mention
             PuzzleJsonDb.commit(puzzle)
         return puzzles_to_archive
 

@@ -6,7 +6,6 @@ non-asyncio: gspread, cryptography, oauth2client, google-api-python-client
 from typing import Optional
 import asyncio
 import logging
-
 # asyncio imports
 import gspread_asyncio
 # from google-auth package
@@ -72,6 +71,8 @@ async def create_spreadsheet(
     if share_anyone:
         # Allow anyone with the URL to write to this spreadsheet.
         await agc.insert_permission(sheet.id, None, perm_type="anyone", role="writer")
+        if utils.config.ownerEmail:
+            await agc.insert_permission(sheet.id, util.configs.ownerEmail, perm_type="user", role="owner")
 
     logger.info(f"Created spreadsheet at URL: {spreadsheet_link(sheet.id)}")
     return sheet
