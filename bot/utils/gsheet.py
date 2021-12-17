@@ -74,7 +74,7 @@ async def create_spreadsheet(
         await agc.insert_permission(sheet.id, None, perm_type="anyone", role="writer")
         # Google sheets doesn't allow you to use app scripts if a bot is the owner of a channel so set the owner to a user email (kristen)
         if config.ownerEmail:
-            await agc.insert_permission(sheet.id, configs.ownerEmail, perm_type="user", role="owner")
+            await agc.insert_permission(sheet.id, config.ownerEmail, perm_type="user", role="owner")
 
     logger.info(f"Created spreadsheet at URL: {spreadsheet_link(sheet.id)}")
     return sheet
