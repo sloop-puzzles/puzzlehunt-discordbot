@@ -16,6 +16,7 @@ import gspread
 from gspread.models import Spreadsheet
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
+from . import config
 
 
 logger = logging.getLogger(__name__)
@@ -71,8 +72,9 @@ async def create_spreadsheet(
     if share_anyone:
         # Allow anyone with the URL to write to this spreadsheet.
         await agc.insert_permission(sheet.id, None, perm_type="anyone", role="writer")
-        if utils.config.ownerEmail:
-            await agc.insert_permission(sheet.id, util.configs.ownerEmail, perm_type="user", role="owner")
+        # Google sheets doesn't allow you to use app scripts if a bot is the owner of a channel so set the owner to a user email (kristen)
+        if config.ownerEmail:
+            await agc.insert_permission(sheet.id, configs.ownerEmail, perm_type="user", role="owner")
 
     logger.info(f"Created spreadsheet at URL: {spreadsheet_link(sheet.id)}")
     return sheet

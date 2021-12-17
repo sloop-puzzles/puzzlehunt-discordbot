@@ -214,19 +214,16 @@ class Puzzles(commands.Cog):
                 # update google sheet ID
                 await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
 
-        voice_channel, created_voice = await self.get_or_create_channel(
-            guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
-        )
-        created = created_text or created_voice
-        if created:
+        created = created_text
+        if created_text:
             await ctx.send(
-                f":white_check_mark: I've created new puzzle text and voice channels for {category.mention}: {text_channel.mention}"
+                f":white_check_mark: I've created a new puzzle text channel for {category.mention}: {text_channel.mention}"
             )
         else:
             await ctx.send(
                 f"I've found an already existing puzzle channel for {category.mention}: {text_channel.mention}"
             )
-        return (text_channel, voice_channel, created)
+        return (text_channel, created)
 
     async def send_initial_puzzle_channel_messages(self, channel: discord.TextChannel):
         """Send intro message on a puzzle channel"""
@@ -235,8 +232,8 @@ class Puzzles(commands.Cog):
         )
         embed.add_field(
             name="Overview",
-            value="This channel and the corresponding voice channel "
-            "are goods places to discuss how to tackle this puzzle. Usually you'll "
+            value="This channel "
+            "is a good place to discuss how to tackle this puzzle. Usually you'll "
             "want to do most of the puzzle work itself on Google Sheets / Docs.",
             inline=False,
         )
