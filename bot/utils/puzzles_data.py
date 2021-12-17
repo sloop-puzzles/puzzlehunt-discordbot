@@ -22,6 +22,7 @@ class MissingPuzzleError(RuntimeError):
 @dataclass
 class PuzzleData:
     name: str
+    hunt_name: str
     round_name: str
     guild_id: int = 0
     guild_name: str = ""
@@ -44,7 +45,7 @@ class PuzzleData:
     @classmethod
     def sort_by_round_start(cls, puzzles: list) -> list:
         """Return list of PuzzleData objects sorted by start of round time
-        
+
         Groups puzzles in the same round together, and sorts puzzles within round
         by start_time.
         """
@@ -66,18 +67,19 @@ class _PuzzleJsonDb:
     def __init__(self, dir_path: Path):
         self.dir_path = dir_path
 
-    def puzzle_path(self, puzzle, round_name=None, guild_id=None) -> Path:
+    def puzzle_path(self, puzzle, round_name=None, hunt_name=None guild_id=None) -> Path:
         if isinstance(puzzle, PuzzleData):
             puzzle_name = puzzle.name
             round_name = puzzle.round_name
+            hunt_name = puzzle.hunt_name
             guild_id = puzzle.guild_id
         elif isinstance(puzzle, str):
             puzzle_name = puzzle
-            if round_name is None or guild_id is None:
+            if round_name is None or guild_id is None or hunt_name is None:
                 raise ValueError(f"round_name / guild_id not passed for puzzle {puzzle}")
         else:
             raise ValueError(f"Unknown puzzle type: {type(puzzle)} for {puzzle}")
-        return (self.dir_path / str(guild_id) / round_name / puzzle_name).with_suffix(".json")
+        return (self.dir_path / str(guild_id) / hunt_name / round_name / puzzle_name).with_suffix(".json")
 
     def commit(self, puzzle_data):
         puzzle_path = self.puzzle_path(puzzle_data)

@@ -8,16 +8,18 @@ import pytz
 
 from bot.utils import urls
 from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettingsDb
+from bot.utils.puzzle_settings import GuildSettingsDb, HuntSettings
 
 logger = logging.getLogger(__name__)
 
 
 class Puzzles(commands.Cog):
+    GENERAL_CHANNEL_NAME = "general"
     META_CHANNEL_NAME = "meta"
     META_REASON = "bot-meta"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
+    HUNT_REASON = "bot-hunt-general"
     SOLVED_PUZZLES_CATEGORY = "solved"
     PRIORITIES = ["low", "medium", "high", "very high"]
 
@@ -57,6 +59,18 @@ class Puzzles(commands.Cog):
         await ctx.send(f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}")
         return False
 
+    @command.command(aliases=["h"])
+    async def hunt(self, ctx, *, arg):
+        guild = ctx.guild
+        if not (await self.check_is_bot_channel(ctx)):
+            return
+
+        if ":" in arg:
+            hunt_name, hunt_url = arg.split(":", 1)
+            return await self.create_hunt(ctx, hunt_name_hunt_url)
+
+        raise ValueError(f"Unable to parse hunt name {arg}, try using `!h hunt-name: hunt-url`")
+
     @commands.command(aliases=["p"])
     async def puzzle(self, ctx, *, arg):
         """*Create new puzzle channels: !p round-name: puzzle-name*
@@ -71,8 +85,6 @@ class Puzzles(commands.Cog):
                 if self.clean_name(round_name) != category:
                     # Check current category matches given round name
                     raise ValueError(f"Unexpected round: {round_name}, expected: {category.name}")
-            else:
-                puzzle_name = arg
             return await self.create_puzzle_channel(ctx, category.name, puzzle_name)
 
         if not (await self.check_is_bot_channel(ctx)):
@@ -87,9 +99,10 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["r"])
     async def round(self, ctx, *, arg):
         """*Create new puzzle round: !r round-name*"""
-        if not (await self.check_is_bot_channel(ctx)):
+        if ctx.channel.name != "general":
             return
 
+        hunt_name = ctx.channel.category.name
         category_name = self.clean_name(arg)
         guild = ctx.guild
         category = discord.utils.get(guild.categories, name=category_name)
@@ -97,7 +110,10 @@ class Puzzles(commands.Cog):
             print(f"Creating a new channel category for round: {category_name}")
             # TODO: debug position?
             category = await guild.create_category(category_name, position=len(guild.categories) - 2)
-
+        settings  = GuildSettingsDb.get(guild.id)
+        if not category.id in settings.category_mapping:
+            settings.category_mapping[category.id] = hunt_name
+            GuildSettingsDb.commit(settings)
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
     @commands.command()
@@ -172,6 +188,37 @@ class Puzzles(commands.Cog):
 
         return (channel, created)
 
+    async def create_hunt(self, ctx, hunt_name: str, hunt_url: str):
+        guild = ctx.guild
+        category_name = self.clean_name(hunt_name)
+        category = await guild.create_category(category_name, position=len(guild.categories) - 2)
+        text_channel, created_text = await self.get_or_create_channel(
+            guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, channel_type="text", reason=self.HUNT_REASON
+        )
+        settings = GuildSettingsDb.get(guild.id)
+
+
+        hs = HuntSettings(
+            hunt_name=hunt_name,
+            hunt_url=hunt_url,
+            drive_nexus_sheet_id=nexus_id,
+            drive_parent_id=drive_id,
+        )
+        gsheet_cog = self.bot.get_cog("GoogleSheets")
+        print("google sheets cog:", gsheet_cog)
+        if gsheet_cog is not None:
+            # update google sheet ID
+            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
+        hs.drive_nexus_sheet_id = nexus_spreadsheet["id"]
+        hs.drive_parent_id = hunt_folder["id"]
+        # add hunt settings
+        settings[hunt_name] = hs
+        GuildSettingsDb.commit(settings)
+        await self.send_initial_hunt_channel_messages(self, hunt, text_channel)
+
+        return (category, channel, True)
+
+
     async def create_puzzle_channel(self, ctx, round_name: str, puzzle_name: str):
         guild = ctx.guild
         category_name = self.clean_name(round_name)
@@ -179,6 +226,10 @@ class Puzzles(commands.Cog):
         if category is None:
             raise ValueError(f"Round {category_name} not found")
 
+        settings = GuildSettingsDb.get_cached(guild.id)
+        if not category.id in settings.category_mapping:
+            raise ValueError(f"Hunt not found for {category_mapping}")
+        hunt_name = settings.category_mapping[category.id]
         channel_name = self.clean_name(puzzle_name)
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
@@ -186,6 +237,7 @@ class Puzzles(commands.Cog):
         if created_text:
             puzzle_data = PuzzleData(
                 name=channel_name,
+                hunt_name=hunt_name,
                 round_name=category_name,
                 guild_name=guild.name,
                 guild_id=guild.id,
@@ -193,18 +245,18 @@ class Puzzles(commands.Cog):
                 channel_id=text_channel.id,
                 start_time=datetime.datetime.now(tz=pytz.UTC),
             )
-            settings = GuildSettingsDb.get_cached(guild.id)
-            if settings.hunt_url:
+            hunt_settings = settings.hunt_settings[hunt_name]
+            if hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
-                hunt_url_base = settings.hunt_url.rstrip("/")
+                hunt_url_base = hunt_settings.hunt_url.rstrip("/")
                 if channel_name == "meta":
                     # Use the round name in the URL
-                    hunt_name = category_name.lower().replace("-", settings.hunt_url_sep)
+                    p_name = category_name.lower().replace("-", hunt_settings.hunt_url_sep)
                 else:
-                    hunt_name = channel_name.replace("-", settings.hunt_url_sep)
-                puzzle_data.hunt_url = f"{hunt_url_base}/{hunt_name}"
+                    p_name = channel_name.replace("-", hunt_settings.hunt_url_sep)
+                puzzle_data.hunt_url = f"{hunt_url_base}/puzzle/{hunt_name}"
             PuzzleJsonDb.commit(puzzle_data)
             await self.send_initial_puzzle_channel_messages(text_channel)
 
@@ -224,6 +276,27 @@ class Puzzles(commands.Cog):
                 f"I've found an already existing puzzle channel for {category.mention}: {text_channel.mention}"
             )
         return (text_channel, created)
+
+    async def send_initial_hunt channel_messages(self, hunt: HuntSettings, channel: discord.TextChannel):
+        embed = discord.Embed(
+            description=f"""Welcome to the general channel for {channel.category.mention}!"""
+        )
+        embed.add_field(
+            name="Overview",
+            value="This channel "
+            " has info about the hunt itself and it is where you will create new round channels"
+            inline=False,
+        )
+        embed.add_field(
+            name"Important Links",
+            value=f"""The following are some useful links:
+* Hunt Website: {hunt.hunt_url}
+* Nexus Sheet: {urls.spreadsheet_url(hunt.drive_nexus_sheet_id)}
+* Drive URL: {urls.drive_folder_url(hunt.drive_parent_id)}
+"""
+            inline=False,
+        )
+        await channel.send(embed=embed)
 
     async def send_initial_puzzle_channel_messages(self, channel: discord.TextChannel):
         """Send intro message on a puzzle channel"""

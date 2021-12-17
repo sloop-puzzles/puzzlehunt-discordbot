@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from typing: import Dict, List
 
 from dataclasses_json import dataclass_json
 
@@ -15,14 +16,19 @@ if "LADDER_SPOT_DATA_DIR" in os.environ:
 class GuildSettings:
     guild_id: int
     guild_name: str = ""
+    discord_bot_channel: str = ""   # Channel to listen for bot commands
+    drive_resources_id: str = ""    # Document with resources links, etc
+    hunt_settings: Dict[str, HuntSettings] = {}
+    category_mapping: Dict[int, str] = {}
+
+@dataclass_json
+@dataclass
+class HuntSettings:
+    hunt_url_sep: str = "_"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
     hunt_name: str = ""
     hunt_url: str = ""
-    hunt_url_sep: str = "_"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
-    discord_bot_channel: str = ""   # Channel to listen for bot commands
-    drive_parent_id: str = ""       # ID of root drive folder
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
-    drive_resources_id: str = ""    # Document with resources links, etc
-
+    drive_parent_id: str = ""       # ID of root drive folder
 
 class GuildSettingsDb:
     cached_settings = {}

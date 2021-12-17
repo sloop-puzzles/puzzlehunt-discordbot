@@ -1,5 +1,4 @@
-"""
-Google Drive integration for puzzle organization
+""" Google Drive integration for puzzle organization
 
 This is a separate cog so that Google Drive integration
 can be easily disabled; simply omit this file.
@@ -41,6 +40,31 @@ class GoogleSheets(commands.Cog):
         """Capitalize name for easy comprehension"""
         return string.capwords(name.replace("-", " "))
 
+    async def create_nexus_spreadsheet(self, text_channel: discord.TextChannel, hunt_name: str):
+        settings = GuildSettingsDb.get(guild_id)
+        folder_name = self.cap_name(hunt_name)
+        if not settings.drive_parent_id:
+            return
+        try:
+            hunt_folder = await get_or_create_folder(
+                name= folder_name, parent_id=settings.drive_parent_id,
+            )
+
+            hunt_folder_id = hunt_folder["id"]
+            spreadsheet = await create_spreadsheet(agcm=self.agcm, tile="Nexus", folder_id=hunt_folder_id)
+            url = urls.spreadsheet_url(spreadsheet.id)
+            embed = discord.Embed(
+                description=f":ladder: :dog: I've created a spreadsheet for you at {url} Check out the `Quick Links` tab for more info!"
+            )
+            await text_channel.send(embed=embed)
+        except Exception as exc:
+            logger.exception(f"Unable to create nexus spreadsheet for {hunt_name}")
+            await text_channel.send(f":exclamation: Unable to create nexus spreadsheet for {hunt_name}: {exc}")
+            return
+
+        return (spreadsheet, hunt_folder)
+
+
     async def create_puzzle_spreadsheet(self, text_channel: discord.TextChannel, puzzle: PuzzleData):
         guild_id = text_channel.guild.id
         name = self.cap_name(puzzle.name)
@@ -50,13 +74,14 @@ class GoogleSheets(commands.Cog):
             name = f"{name} ({round_name})"
 
         settings = GuildSettingsDb.get(guild_id)
-        if not settings.drive_parent_id:
+        hunt_settings = settings.hunt_settings[puzzle.hunt_name]
+        if not hunt_settings.drive_parent_id:
             return
 
         try:
             # create drive folder if needed
             round_folder = await get_or_create_folder(
-                name=round_name, parent_id=settings.drive_parent_id
+                name=round_name, parent_id=hunt_settings.drive_parent_id
             )
             round_folder_id = round_folder["id"]
 
