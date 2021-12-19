@@ -147,9 +147,10 @@ class GoogleSheets(commands.Cog):
         """Ref: https://discordpy.readthedocs.io/en/latest/ext/tasks/"""
         for guild in self.bot.guilds:
             settings = GuildSettingsDb.get_cached(guild.id)
-            if settings.drive_nexus_sheet_id:
-                puzzles = PuzzleJsonDb.get_all(guild.id)
-                await update_nexus(agcm=self.agcm, file_id=settings.drive_nexus_sheet_id, puzzles=puzzles)
+            for key, hs in settings.hunt_settings:
+                if hs.drive_nexus_sheet_id:
+                    puzzles = PuzzleJsonDb.get_all(guild.id, key)
+                    await update_nexus(agcm=self.agcm, file_id=hs.drive_nexus_sheet_id, puzzles=puzzles)
 
     @refresh_nexus.before_loop
     async def before_refreshing_nexus(self):

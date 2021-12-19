@@ -10,6 +10,7 @@ class TestPuzzleData:
     def dummy_data(self, name="dummy-puzzle", round_name="dummy-round", start_day=1):
         return PuzzleData(
             name=name,
+            hunt_name="dummy-hunt",
             round_name=round_name,
             guild_name="dummy-guild",
             guild_id=1,

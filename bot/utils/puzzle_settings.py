@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 from pathlib import Path
-from typing: import Dict, List
+from typing import Dict, List
 
 from dataclasses_json import dataclass_json
 
@@ -9,17 +9,6 @@ DATA_DIR = Path(__file__).parent.parent.parent / "data"
 if "LADDER_SPOT_DATA_DIR" in os.environ:
     # TODO: move to config.json??
     DATA_DIR = Path(os.environ["LADDER_SPOT_DATA_DIR"])
-
-
-@dataclass_json
-@dataclass
-class GuildSettings:
-    guild_id: int
-    guild_name: str = ""
-    discord_bot_channel: str = ""   # Channel to listen for bot commands
-    drive_resources_id: str = ""    # Document with resources links, etc
-    hunt_settings: Dict[str, HuntSettings] = {}
-    category_mapping: Dict[int, str] = {}
 
 @dataclass_json
 @dataclass
@@ -29,6 +18,18 @@ class HuntSettings:
     hunt_url: str = ""
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
     drive_parent_id: str = ""       # ID of root drive folder
+
+@dataclass_json
+@dataclass
+class GuildSettings:
+    guild_id: int
+    guild_name: str = ""
+    discord_bot_channel: str = ""   # Channel to listen for bot commands
+    drive_resources_id: str = ""    # Document with resources links, etc
+    drive_parent_id: str = ""
+    hunt_settings: Dict[str, HuntSettings] = field(default_factory=dict)
+    category_mapping: Dict[int, str] = field(default_factory=dict)
+
 
 class GuildSettingsDb:
     cached_settings = {}

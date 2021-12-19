@@ -67,7 +67,7 @@ class _PuzzleJsonDb:
     def __init__(self, dir_path: Path):
         self.dir_path = dir_path
 
-    def puzzle_path(self, puzzle, round_name=None, hunt_name=None guild_id=None) -> Path:
+    def puzzle_path(self, puzzle, round_name=None, hunt_name=None, guild_id=None) -> Path:
         if isinstance(puzzle, PuzzleData):
             puzzle_name = puzzle.name
             round_name = puzzle.round_name
@@ -105,8 +105,8 @@ class _PuzzleJsonDb:
                 raise MissingPuzzleError(f"Unable to find puzzle {puzzle_name} for {round_name}")
             raise
 
-    def get_all(self, guild_id) -> List[PuzzleData]:
-        paths = self.dir_path.rglob(f"{guild_id}/*/*.json")
+    def get_all(self, guild_id, hunt_name="*") -> List[PuzzleData]:
+        paths = self.dir_path.rglob(f"{guild_id}/{hunt_name}/*/*.json")
         puzzle_datas = []
         for path in paths:
             try:

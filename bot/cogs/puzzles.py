@@ -59,7 +59,7 @@ class Puzzles(commands.Cog):
         await ctx.send(f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}")
         return False
 
-    @command.command(aliases=["h"])
+    @commands.command(aliases=["h"])
     async def hunt(self, ctx, *, arg):
         guild = ctx.guild
         if not (await self.check_is_bot_channel(ctx)):
@@ -141,10 +141,12 @@ class Puzzles(commands.Cog):
     @commands.command(aliases=["list"])
     async def list_puzzles(self, ctx):
         """*List all puzzles and their statuses*"""
-        if not (await self.check_is_bot_channel(ctx)):
+
+        if ctx.channel.name != "general":
             return
 
-        all_puzzles = PuzzleJsonDb.get_all(ctx.guild.id)
+
+        all_puzzles = PuzzleJsonDb.get_all(ctx.guild.id, ctx.channel.category.name)
         # TODO: this is very primitive
         message = ""
         for puzzle in all_puzzles:
@@ -196,6 +198,9 @@ class Puzzles(commands.Cog):
             guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, channel_type="text", reason=self.HUNT_REASON
         )
         settings = GuildSettingsDb.get(guild.id)
+        solved_category, created_solved = await self.get_or_create_channel(
+            guild=guild, category=category, channel_name=self.get_solved_puzzle_category(hunt_name), channel_type="text", reason=self.HUNT_REASON
+        )
 
 
         hs = HuntSettings(
@@ -208,7 +213,7 @@ class Puzzles(commands.Cog):
         print("google sheets cog:", gsheet_cog)
         if gsheet_cog is not None:
             # update google sheet ID
-            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_puzzle_spreadsheet(text_channel, puzzle_data)
+            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_nexus_spreadsheet(text_channel, hunt_name)
         hs.drive_nexus_sheet_id = nexus_spreadsheet["id"]
         hs.drive_parent_id = hunt_folder["id"]
         # add hunt settings
@@ -277,23 +282,23 @@ class Puzzles(commands.Cog):
             )
         return (text_channel, created)
 
-    async def send_initial_hunt channel_messages(self, hunt: HuntSettings, channel: discord.TextChannel):
+    async def send_initial_hunt_channel_messages(self, hunt: HuntSettings, channel: discord.TextChannel):
         embed = discord.Embed(
             description=f"""Welcome to the general channel for {channel.category.mention}!"""
         )
         embed.add_field(
             name="Overview",
             value="This channel "
-            " has info about the hunt itself and it is where you will create new round channels"
+            " has info about the hunt itself and it is where you will create new round channels",
             inline=False,
         )
         embed.add_field(
-            name"Important Links",
+            name="Important Links",
             value=f"""The following are some useful links:
 * Hunt Website: {hunt.hunt_url}
 * Nexus Sheet: {urls.spreadsheet_url(hunt.drive_nexus_sheet_id)}
 * Drive URL: {urls.drive_folder_url(hunt.drive_parent_id)}
-"""
+""",
             inline=False,
         )
         await channel.send(embed=embed)
@@ -328,14 +333,14 @@ class Puzzles(commands.Cog):
         await channel.send(embed=embed)
 
     async def send_not_puzzle_channel(self, ctx):
-        if ctx.channel and ctx.channel.category.name == self.get_solved_puzzle_category(ctx.guild.id):
+        # TODO: Fix this
+        if ctx.channel and ctx.channel.category.name == self.get_solved_puzzle_category(""):
             await ctx.send("This puzzle appears to already be solved")
         else:
             await ctx.send("This does not appear to be a puzzle channel")
 
-    def get_solved_puzzle_category(self, guild_id):
-        settings = GuildSettingsDb.get(guild_id)
-        return f"{settings.hunt_name}-{self.SOLVED_PUZZLES_CATEGORY}"
+    def get_solved_puzzle_category(self, hunt_name):
+        return f"{hunt_name}-{self.SOLVED_PUZZLES_CATEGORY}"
 
 
     def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
@@ -607,39 +612,38 @@ class Puzzles(commands.Cog):
         to start with the text [SOLVED]
         """
         puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id)
-        # need to stash guild as a botvar:
-        # https://stackoverflow.com/questions/64676968/how-to-use-context-within-discord-ext-tasks-loop-in-discord-py
-        # channel = .get(channel)
-        solved_category_name = self.get_solved_puzzle_category(guild.id)
-        solved_category = discord.utils.get(guild.categories, name=solved_category_name)
-        if not solved_category:
-            avail_categories = [c.name for c in guild.categories]
-            raise ValueError(
-                f"{solved_category_name} category does not exist; available categories: {avail_categories}"
-            )
 
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
-        for puzzle in puzzles_to_archive:
-            channel = discord.utils.get(
-                guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
+        puzzles_by_hunt = {}
+        for puzz in puzzles_to_archive:
+            if not puzz.hunt_name in puzzle_by_hunt:
+                puzzles_by_hunt[puzz.hunt_name] = []
+            puzzles_by_hunt[puzz.hunt_name].append(puzz)
+
+        for hunt_name, puzzles in puzzles_by_hunt:
+            solved_category_name = self.get_solved_puzzle_category(puzzle.hunt_name)
+            solved_category = discord.utils.get(guild.categories, name=solved_category_name)
+            if not solved_category:
+                avail_categories = [c.name for c in guild.categories]
+                raise ValueError(
+                    f"{solved_category_name} category does not exist; available categories: {avail_categories}"
             )
-            if channel:
-                await channel.edit(category=solved_category)
 
-            voice_channel = discord.utils.get(
-                guild.channels, type=discord.ChannelType.voice, name=puzzle.name
-            )
-            if voice_channel:
-                await voice_channel.delete()
+            for puzzle in puzzles:
+                channel = discord.utils.get(
+                    guild.channels, type=discord.ChannelType.text, id=puzzle.channel_id
+                )
+                if channel:
+                    await channel.edit(category=solved_category)
 
-            if gsheet_cog:
-                await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
+                if gsheet_cog:
+                    await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
 
-            puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
-            if channel:
-                puzzle.archive_channel_mention = channel.mention
-            PuzzleJsonDb.commit(puzzle)
+                puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
+                if channel:
+                    puzzle.archive_channel_mention = channel.mention
+                PuzzleJsonDb.commit(puzzle)
         return puzzles_to_archive
 
     @commands.command()
