@@ -95,9 +95,9 @@ class _PuzzleJsonDb:
         except IOError:
             pass
 
-    def get(self, guild_id, puzzle_name, round_name) -> PuzzleData:
+    def get(self, guild_id, puzzle_name, round_name, hunt_name) -> PuzzleData:
         try:
-            with self.puzzle_path(puzzle_name, round_name=round_name, guild_id=guild_id).open() as fp:
+            with self.puzzle_path(puzzle_name, hunt_name=hunt_name, round_name=round_name, guild_id=guild_id).open() as fp:
                 return PuzzleData.from_json(fp.read())
         except (IOError, OSError) as exc:
             # can also just catch FileNotFoundError

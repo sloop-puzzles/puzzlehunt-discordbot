@@ -67,7 +67,7 @@ class Puzzles(commands.Cog):
 
         if ":" in arg:
             hunt_name, hunt_url = arg.split(":", 1)
-            return await self.create_hunt(ctx, hunt_name_hunt_url)
+            return await self.create_hunt(ctx, hunt_name,hunt_url)
 
         raise ValueError(f"Unable to parse hunt name {arg}, try using `!h hunt-name: hunt-url`")
 
@@ -85,6 +85,8 @@ class Puzzles(commands.Cog):
                 if self.clean_name(round_name) != category:
                     # Check current category matches given round name
                     raise ValueError(f"Unexpected round: {round_name}, expected: {category.name}")
+            else:
+                puzzle_name = arg
             return await self.create_puzzle_channel(ctx, category.name, puzzle_name)
 
         if not (await self.check_is_bot_channel(ctx)):
@@ -198,28 +200,24 @@ class Puzzles(commands.Cog):
             guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, channel_type="text", reason=self.HUNT_REASON
         )
         settings = GuildSettingsDb.get(guild.id)
-        solved_category, created_solved = await self.get_or_create_channel(
-            guild=guild, category=category, channel_name=self.get_solved_puzzle_category(hunt_name), channel_type="text", reason=self.HUNT_REASON
-        )
+        solved_category = await guild.create_category(self.get_solved_puzzle_category(hunt_name), position=len(guild.categories) - 2)
 
 
         hs = HuntSettings(
             hunt_name=hunt_name,
             hunt_url=hunt_url,
-            drive_nexus_sheet_id=nexus_id,
-            drive_parent_id=drive_id,
         )
         gsheet_cog = self.bot.get_cog("GoogleSheets")
         print("google sheets cog:", gsheet_cog)
         if gsheet_cog is not None:
             # update google sheet ID
             nexus_spreadsheet, hunt_folder = await gsheet_cog.create_nexus_spreadsheet(text_channel, hunt_name)
-        hs.drive_nexus_sheet_id = nexus_spreadsheet["id"]
+        hs.drive_nexus_sheet_id = nexus_spreadsheet.id
         hs.drive_parent_id = hunt_folder["id"]
         # add hunt settings
-        settings[hunt_name] = hs
+        settings.hunt_settings[hunt_name] = hs
         GuildSettingsDb.commit(settings)
-        await self.send_initial_hunt_channel_messages(self, hunt, text_channel)
+        await self.send_initial_hunt_channel_messages(hs, text_channel)
 
         return (category, channel, True)
 
@@ -354,8 +352,10 @@ class Puzzles(commands.Cog):
         guild_id = channel.guild.id
         round_name = channel.category.name
         puzzle_name = channel.name
+        settings = GuildSettingsDb.get_cached(guild_id)
+        hunt_name = settings.category_mapping[channel.category.id]
         try:
-            return PuzzleJsonDb.get(guild_id, puzzle_name, round_name)
+            return PuzzleJsonDb.get(guild_id, puzzle_name, round_name, hunt_name)
         except MissingPuzzleError:
             print(f"Unable to retrieve {puzzle_name}")
             return None
@@ -617,12 +617,12 @@ class Puzzles(commands.Cog):
 
         puzzles_by_hunt = {}
         for puzz in puzzles_to_archive:
-            if not puzz.hunt_name in puzzle_by_hunt:
+            if not puzz.hunt_name in puzzles_by_hunt:
                 puzzles_by_hunt[puzz.hunt_name] = []
             puzzles_by_hunt[puzz.hunt_name].append(puzz)
 
-        for hunt_name, puzzles in puzzles_by_hunt:
-            solved_category_name = self.get_solved_puzzle_category(puzzle.hunt_name)
+        for hunt_name, puzzles in puzzles_by_hunt.items():
+            solved_category_name = self.get_solved_puzzle_category(hunt_name)
             solved_category = discord.utils.get(guild.categories, name=solved_category_name)
             if not solved_category:
                 avail_categories = [c.name for c in guild.categories]
