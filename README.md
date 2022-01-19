@@ -1,4 +1,6 @@
-# Discord Bot for Ladder Dogs
+# Discord Bot for Sloopertroup
+This is a fork of a [bot originally by Ladder Dogs](https://github.com/azjps/ladder_dogs_discord_bot)
+
 Simple discord bot which manages puzzle channels for puzzle hunts via discord commands, used by a small-to-medium sized team.
 
 This was initially created from [`cookiecutter-discord.py-postgres`](https://github.com/makupi/cookiecutter-discord.py-postgres) and uses [`aiogoogle`](https://aiogoogle.readthedocs.io/en/latest/)/[`gspread_asyncio`](https://gspread-asyncio.readthedocs.io/en/latest/index.html) for (optional) Google Drive integration.
@@ -69,7 +71,7 @@ the bot only populates the contents of the spreadsheet cells.)
 
 Clone this repository
 ```
-git clone https://github.com/azjps/ladder_dogs_discord_bot
+git clone https://github.com/sloop-puzzles/puzzlehunt-discordbot
 ```
 Create a [discord application, bot](https://realpython.com/how-to-make-a-discord-bot-python/), and add the bot's token to a [`config.json` file](https://github.com/makupi/cookiecutter-discord.py-postgres/blob/master/%7B%7Bcookiecutter.bot_slug%7D%7D/config.json) in the root directory of this project:
 ```json
