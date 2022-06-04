@@ -8,7 +8,7 @@ from typing import List, Optional
 import gspread_asyncio
 
 from bot.utils import urls
-from bot.utils.puzzles_data import PuzzleData
+from bot.store import PuzzleData
 
 logger = logging.getLogger(__name__)
 

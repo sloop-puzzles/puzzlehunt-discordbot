@@ -16,8 +16,7 @@ import gspread_formatting
 import pytz
 
 from bot.utils import urls
-from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettingsDb, GuildSettings
+from bot.store import GuildSettingsDb, GuildSettings, MissingPuzzleError, PuzzleData, PuzzleJsonDb
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
 from bot.utils.gsheet_nexus import update_nexus

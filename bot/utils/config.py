@@ -4,7 +4,8 @@ import os
 default_config = {
     "discord_bot_token": "",
     "prefix": "!",
-    "database": "postgresql://localhost/postgres"
+    "database": "postgresql://localhost/postgres",
+    "storage": "fs",
 }
 
 class Config:
@@ -20,6 +21,7 @@ class Config:
         self.token = self.config.get("discord_bot_token", default_config.get("discord_bot_token"))
         self.database = os.getenv("DB_DSN")  # for docker
         self.ownerEmail = self.config.get("owner_email", None)
+        self.storage = self.config.get("storage", default_config.get("storage"))
         if not self.database:
             self.database = self.config.get("database", default_config.get("database"))
 

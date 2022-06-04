@@ -1,71 +1,16 @@
-from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
 import datetime
 import errno
 import json
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pytz
-
-from bot.utils.puzzle_settings import DATA_DIR
+from .puzzle_data import _PuzzleJsonDb, PuzzleData
+from .puzzle_settings import _GuildSettingsDb, GuildSettings
 
 logger = logging.getLogger(__name__)
-
-
-class MissingPuzzleError(RuntimeError):
-    pass
-
-
-@dataclass_json
-@dataclass
-class PuzzleData:
-    name: str
-    hunt_name: str
-    round_name: str
-    round_id: int = 0  # round = category channel
-    guild_id: int = 0
-    guild_name: str = ""
-    channel_id: int = 0
-    channel_mention: str = ""
-    voice_channel_id: int = 0
-    # archive_channel_id: str = ""
-    archive_channel_mention: str = ""
-    hunt_url: str = ""
-    google_sheet_id: str = ""
-    google_folder_id: str = ""
-    status: str = ""
-    solution: str = ""
-    priority: str = ""
-    puzzle_type: str = ""
-    notes: List[str] = field(default_factory=list)
-    start_time: Optional[datetime.datetime] = None
-    solve_time: Optional[datetime.datetime] = None
-    archive_time: Optional[datetime.datetime] = None
-
-    @classmethod
-    def sort_by_round_start(cls, puzzles: list) -> list:
-        """Return list of PuzzleData objects sorted by start of round time
-
-        Groups puzzles in the same round together, and sorts puzzles within round
-        by start_time.
-        """
-        round_start_times = {}
-
-        for puzzle in puzzles:
-            if puzzle.start_time is None:
-                continue
-
-            start_time = puzzle.start_time.timestamp()  # epoch time
-            round_start_time = round_start_times.get(puzzle.round_name)
-            if round_start_time is None or start_time < round_start_time:
-                round_start_times[puzzle.round_name] = start_time
-
-        return sorted(puzzles, key=lambda p: (round_start_times.get(p.round_name, 0), p.start_time or 0))
-
-
-class _PuzzleJsonDb:
+class FilePuzzleJsonDb(_PuzzleJsonDb):
     def __init__(self, dir_path: Path):
         self.dir_path = dir_path
 
@@ -162,4 +107,35 @@ class _PuzzleJsonDb:
                 result[str(relpath)] = json.load(fp)
         return result
 
-PuzzleJsonDb = _PuzzleJsonDb(dir_path=DATA_DIR)
+class FileGuildSettingsDb():
+    cached_settings = {}
+    dir_path = ''
+
+    @classmethod
+    def get(cls, guild_id: int) -> GuildSettings:
+        settings_path = cls.dir_path / str(guild_id) / "settings.json"
+        if settings_path.exists():
+            with settings_path.open() as fp:
+                settings = GuildSettings.from_json(fp.read())
+        else:
+            # Populate empty settings file
+            settings = GuildSettings(guild_id=guild_id)
+            cls.commit(settings)
+        return settings
+
+    @classmethod
+    def get_cached(cls, guild_id: int) -> GuildSettings:
+        if guild_id in cls.cached_settings:
+            return cls.cached_settings[guild_id]
+        settings = cls.get(guild_id)
+        cls.cached_settings[guild_id] = settings
+        return settings
+
+    @classmethod
+    def commit(cls, settings: GuildSettings):
+        settings_path = cls.dir_path / str(settings.guild_id) / "settings.json"
+        settings_path.parent.parent.mkdir(exist_ok=True)
+        settings_path.parent.mkdir(exist_ok=True)
+        with settings_path.open("w") as fp:
+            fp.write(settings.to_json(indent=4))
+        cls.cached_settings[settings.guild_id] = settings

@@ -7,8 +7,7 @@ from discord.ext import commands, tasks
 import pytz
 
 from bot.utils import urls
-from bot.utils.puzzles_data import MissingPuzzleError, PuzzleData, PuzzleJsonDb
-from bot.utils.puzzle_settings import GuildSettings, GuildSettingsDb, HuntSettings
+from bot.store import MissingPuzzleError, PuzzleData, PuzzleJsonDb, GuildSettings, GuildSettingsDb, HuntSettings
 
 logger = logging.getLogger(__name__)
 

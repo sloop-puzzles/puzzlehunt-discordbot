@@ -42,7 +42,7 @@ async def find_folder(name: str, parent_id: str) -> dict:
 
 async def get_or_create_folder(name: str, parent_id: str) -> dict:
     """Find folder inside existing folder
-    
+
     Args:
         parent_id: ID of parent folder in Drive URL
     """
@@ -51,7 +51,7 @@ async def get_or_create_folder(name: str, parent_id: str) -> dict:
         existing_folder = existing_folder["files"][0]
         existing_folder["created"] = False
         return existing_folder
-    
+
     created_folder = await create_folder(name, parent_id)
     created_folder["name"] = name
     created_folder["created"] = True
