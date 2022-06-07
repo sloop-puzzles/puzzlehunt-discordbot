@@ -14,7 +14,7 @@ class FilePuzzleJsonDb(_PuzzleJsonDb):
     def __init__(self, dir_path: Path):
         self.dir_path = dir_path
 
-    def puzzle_path(self, puzzle, round_id=None, hunt_name=None, guild_id=None) -> Path:
+    def puzzle_path(self, puzzle, round_id=None, hunt_id=None, guild_id=None) -> Path:
         """Store puzzle metadata to the path `guild/category/puzzle.json`
 
         Use unique ASCII ids (e.g. the discord id snowflakes) for each part of the
@@ -29,15 +29,15 @@ class FilePuzzleJsonDb(_PuzzleJsonDb):
             puzzle_id = puzzle.channel_id
             round_id = puzzle.round_id
             guild_id = puzzle.guild_id
-            hunt_name = puzzle.hunt_name
+            hunt_id = puzzle.hunt_id
         elif isinstance(puzzle, (int, str)):
             puzzle_id = puzzle
-            if round_id is None or guild_id is None or hunt_name is None:
+            if round_id is None or guild_id is None or hunt_id is None:
                 raise ValueError(f"round_id / guild_id not passed for puzzle {puzzle}")
         else:
             raise ValueError(f"Unknown puzzle type: {type(puzzle)} for {puzzle}")
         # TODO: Database would be better here .. who wants to sort through puzzle metadata by these ids?
-        return (self.dir_path / str(guild_id) / str(hunt_name) / str(round_id) / str(puzzle_id)).with_suffix(".json")
+        return (self.dir_path / str(guild_id) / str(hunt_id) / str(round_id) / str(puzzle_id)).with_suffix(".json")
 
     def commit(self, puzzle_data):
         """Update puzzle metadata file"""
@@ -54,9 +54,9 @@ class FilePuzzleJsonDb(_PuzzleJsonDb):
         except IOError:
             pass
 
-    def get(self, guild_id, puzzle_id, round_id, hunt_name) -> PuzzleData:
+    def get(self, guild_id, puzzle_id, round_id, hunt_id) -> PuzzleData:
         try:
-            with self.puzzle_path(puzzle_id,  hunt_name=hunt_name, round_id=round_id, guild_id=guild_id).open() as fp:
+            with self.puzzle_path(puzzle_id, hunt_id=hunt_id, round_id=round_id, guild_id=guild_id).open() as fp:
                 return PuzzleData.from_json(fp.read())
         except (IOError, OSError) as exc:
             # can also just catch FileNotFoundError
@@ -64,8 +64,8 @@ class FilePuzzleJsonDb(_PuzzleJsonDb):
                 raise MissingPuzzleError(f"Unable to find puzzle {puzzle_id} for {round_id}")
             raise
 
-    def get_all(self, guild_id, hunt_name="*") -> List[PuzzleData]:
-        paths = self.dir_path.rglob(f"{guild_id}/{hunt_name}/*/*.json")
+    def get_all(self, guild_id, hunt_id="*") -> List[PuzzleData]:
+        paths = self.dir_path.rglob(f"{guild_id}/{hunt_id}/*/*.json")
         puzzle_datas = []
         for path in paths:
             try:
@@ -108,34 +108,32 @@ class FilePuzzleJsonDb(_PuzzleJsonDb):
         return result
 
 class FileGuildSettingsDb():
-    cached_settings = {}
-    dir_path = ''
+    def __init__(self, dir_path: Path):
+        self.dir_path = dir_path
+        self.cached_settings = {}
 
-    @classmethod
-    def get(cls, guild_id: int) -> GuildSettings:
-        settings_path = cls.dir_path / str(guild_id) / "settings.json"
+    def get(self, guild_id: int) -> GuildSettings:
+        settings_path = self.dir_path / str(guild_id) / "settings.json"
         if settings_path.exists():
             with settings_path.open() as fp:
                 settings = GuildSettings.from_json(fp.read())
         else:
             # Populate empty settings file
             settings = GuildSettings(guild_id=guild_id)
-            cls.commit(settings)
+            self.commit(settings)
         return settings
 
-    @classmethod
-    def get_cached(cls, guild_id: int) -> GuildSettings:
-        if guild_id in cls.cached_settings:
-            return cls.cached_settings[guild_id]
-        settings = cls.get(guild_id)
-        cls.cached_settings[guild_id] = settings
+    def get_cached(self, guild_id: int) -> GuildSettings:
+        if guild_id in self.cached_settings:
+            return self.cached_settings[guild_id]
+        settings = self.get(guild_id)
+        self.cached_settings[guild_id] = settings
         return settings
 
-    @classmethod
-    def commit(cls, settings: GuildSettings):
-        settings_path = cls.dir_path / str(settings.guild_id) / "settings.json"
+    def commit(self, settings: GuildSettings):
+        settings_path = self.dir_path / str(settings.guild_id) / "settings.json"
         settings_path.parent.parent.mkdir(exist_ok=True)
         settings_path.parent.mkdir(exist_ok=True)
         with settings_path.open("w") as fp:
             fp.write(settings.to_json(indent=4))
-        cls.cached_settings[settings.guild_id] = settings
+        self.cached_settings[settings.guild_id] = settings

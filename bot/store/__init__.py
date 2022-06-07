@@ -17,5 +17,4 @@ PuzzleJsonDb = _PuzzleJsonDb
 GuildSettingsDb = _GuildSettingsDb
 if config.storage == 'fs':
     PuzzleJsonDb = FilePuzzleJsonDb(dir_path=DATA_DIR)
-    GuildSettingsDb = FileGuildSettingsDb
-    GuildSettingsDb.dir_path = DATA_DIR
+    GuildSettingsDb = FileGuildSettingsDb(dir_path=DATA_DIR)

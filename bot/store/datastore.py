@@ -1,4 +1,4 @@
-class GCSPuzzleJsonDb(_PuzzleJsonDb):
+class DatastorePuzzleJsonDb(_PuzzleJsonDb):
     def commit(self, puzzle_data):
         pass
     def delete(self, puzzle_data):
@@ -7,12 +7,12 @@ class GCSPuzzleJsonDb(_PuzzleJsonDb):
         pass
     def get_all(self, guild_id, hunt_id="*") -> List[PuzzleData]:
         pass
-:   def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False, minutes=5) -> List[PuzzleData]:
+    def get_solved_puzzles_to_archive(self, guild_id, now=None, include_meta=False, minutes=5) -> List[PuzzleData]:
         pass
     def aggregate_json(self) -> dict:
         pass
 
-class GCSGuildSettingsDb(_GuildSettingsDb):
+class DatastoreGuildSettingsDb(_GuildSettingsDb):
     def get(self, guild_id: int) -> GuildSettings:
         pass
 

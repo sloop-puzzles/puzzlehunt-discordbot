@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 from pathlib import Path
+import traceback
 
 import discord
 from discord.ext import commands
@@ -71,6 +72,7 @@ def load_extensions(_bot):
             _bot.load_extension(ext)
         except Exception as ex:
             print(f"Failed to load extension {ext} - exception: {ex}")
+            traceback.print_exc()
 
 
 def run():

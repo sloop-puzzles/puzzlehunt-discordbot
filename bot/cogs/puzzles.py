@@ -103,7 +103,7 @@ class Puzzles(commands.Cog):
         if ctx.channel.name != "general":
             return
 
-        hunt_name = ctx.channel.category.name
+        hunt_id = ctx.channel.category.id
         category_name = self.clean_name(arg)
         guild = ctx.guild
         category = discord.utils.get(guild.categories, name=category_name)
@@ -113,7 +113,7 @@ class Puzzles(commands.Cog):
             category = await guild.create_category(category_name, position=len(guild.categories) - 2)
         settings  = GuildSettingsDb.get(guild.id)
         if not category.id in settings.category_mapping:
-            settings.category_mapping[category.id] = hunt_name
+            settings.category_mapping[category.id] = hunt_id
             GuildSettingsDb.commit(settings)
         await self.create_puzzle_channel(ctx, category.name, self.META_CHANNEL_NAME)
 
@@ -131,9 +131,9 @@ class Puzzles(commands.Cog):
         """*(admin) Show guild-level settings*"""
         guild_id = ctx.guild.id
         settings = GuildSettingsDb.get(guild_id)
-        hunt_name = ctx.channel.category.name
-        if hunt_name in settings.hunt_settings:
-            settings = settings.hunt_settings[hunt_name]
+        hunt_id = ctx.channel.category.id
+        if hunt_id in settings.hunt_settings:
+            settings = settings.hunt_settings[hunt_id]
         await ctx.channel.send(f"```json\n{settings.to_json(indent=2)}```")
 
     @commands.command()
@@ -142,10 +142,11 @@ class Puzzles(commands.Cog):
         """*(admin) Update guild setting: !update_setting key value*"""
         guild_id = ctx.guild.id
         settings = GuildSettingsDb.get(guild_id)
-        hunt_name = ctx.channel.category.name
-        if hunt_name in settings.hunt_settings and hasattr(settings.hunt_settings[hunt_name], setting_key):
-            old_value = getattr(settings.hunt_settings[hunt_name], setting_key)
-            setattr(settings.hunt_settings[hunt_name], setting_key, setting_value)
+        hunt_id = ctx.channel.category.id
+        hunt_name = ctx.chanel.category.name
+        if hunt_id in settings.hunt_settings and hasattr(settings.hunt_settings[hunt_id], setting_key):
+            old_value = getattr(settings.hunt_settings[hunt_id], setting_key)
+            setattr(settings.hunt_settings[hunt_id], setting_key, setting_value)
             GuildSettingsDb.commit(settings)
             await ctx.send(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}` for hunt `{hunt_name}`")
         elif hasattr(settings, setting_key):
@@ -232,17 +233,18 @@ class Puzzles(commands.Cog):
 
         hs = HuntSettings(
             hunt_name=hunt_name,
+            hunt_id=category.id,
             hunt_url=hunt_url,
         )
         gsheet_cog = self.bot.get_cog("GoogleSheets")
         print("google sheets cog:", gsheet_cog)
         if gsheet_cog is not None:
             # update google sheet ID
-            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_nexus_spreadsheet(text_channel, hunt_name)
+            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_nexus_spreadsheet(text_channel, hunti)
         hs.drive_nexus_sheet_id = nexus_spreadsheet.id
         hs.drive_parent_id = hunt_folder["id"]
         # add hunt settings
-        settings.hunt_settings[hunt_name] = hs
+        settings.hunt_settings[category.id] = hs
         GuildSettingsDb.commit(settings)
         await self.send_initial_hunt_channel_messages(hs, text_channel)
 
@@ -264,25 +266,25 @@ class Puzzles(commands.Cog):
         settings = GuildSettingsDb.get_cached(guild.id)
         if not category.id in settings.category_mapping:
             raise ValueError(f"Hunt not found for {category_mapping}")
-        hunt_name = settings.category_mapping[category.id]
+        hunt_id = settings.category_mapping[category.id]
         channel_name = self.clean_name(puzzle_name)
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
         )
         settings = GuildSettingsDb.get_cached(guild.id)
         if created_text:
+            hunt_settings = settings.hunt_settings[hunt_id]
             puzzle_data = PuzzleData(
                 name=channel_name,
-                hunt_name=hunt_name,
+                hunt_id=hunt_id,
+                hunt_name=hunt_settings.hunt_name,
                 round_name=category_name,
                 round_id=category.id,
-                guild_name=guild.name,
                 guild_id=guild.id,
                 channel_mention=text_channel.mention,
                 channel_id=text_channel.id,
                 start_time=datetime.datetime.now(tz=pytz.UTC),
             )
-            hunt_settings = settings.hunt_settings[hunt_name]
             if hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
@@ -406,9 +408,9 @@ class Puzzles(commands.Cog):
         puzzle_id = channel.id
         puzzle_name = channel.name
         settings = GuildSettingsDb.get_cached(guild_id)
-        hunt_name = settings.category_mapping[channel.category.id]
+        hunt_id = settings.category_mapping[channel.category.id]
         try:
-            return PuzzleJsonDb.get(guild_id, puzzle_id, round_id, hunt_name)
+            return PuzzleJsonDb.get(guild_id, puzzle_id, round_id, hunt_id)
         except MissingPuzzleError:
             print(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
             return None
@@ -672,12 +674,12 @@ class Puzzles(commands.Cog):
 
         puzzles_by_hunt = {}
         for puzz in puzzles_to_archive:
-            if not puzz.hunt_name in puzzles_by_hunt:
-                puzzles_by_hunt[puzz.hunt_name] = []
-            puzzles_by_hunt[puzz.hunt_name].append(puzz)
+            if not puzz.hunt_id in puzzles_by_hunt:
+                puzzles_by_hunt[puzz.hunt_id] = []
+            puzzles_by_hunt[puzz.hunt_id].append(puzz)
 
-        for hunt_name, puzzles in puzzles_by_hunt.items():
-            solved_category_name = self.get_solved_puzzle_category(hunt_name)
+        for hunt_id, puzzles in puzzles_by_hunt.items():
+            solved_category_name = self.get_solved_puzzle_category(hunt_id)
             solved_category = discord.utils.get(guild.categories, name=solved_category_name)
             if not solved_category:
                 avail_categories = [c.name for c in guild.categories]
@@ -696,8 +698,6 @@ class Puzzles(commands.Cog):
                     await gsheet_cog.archive_puzzle_spreadsheet(puzzle)
 
                 puzzle.archive_time = datetime.datetime.now(tz=pytz.UTC)
-                if channel:
-                    puzzle.archive_channel_mention = channel.mention
                 PuzzleJsonDb.commit(puzzle)
         return puzzles_to_archive
 
