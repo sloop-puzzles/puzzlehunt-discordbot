@@ -8,8 +8,8 @@ from dataclasses_json import dataclass_json
 @dataclass_json
 @dataclass
 class HuntSettings:
-    hunt_id: int
-    guild_id: int
+    hunt_id: int = 0
+    guild_id: int = 0
     hunt_url_sep: str = "-"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
     hunt_name: str = ""
     hunt_url: str = ""
