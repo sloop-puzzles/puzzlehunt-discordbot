@@ -13,6 +13,7 @@ class HuntSettings:
     hunt_url_sep: str = "-"         # Separator in the puzzle url, e.g. - for https://./puzzle/foo-bar
     hunt_name: str = ""
     hunt_url: str = ""
+    hunt_puzzle_prefix: str = "puzzle"
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
     drive_parent_id: str = ""       # ID of root drive folder
 
