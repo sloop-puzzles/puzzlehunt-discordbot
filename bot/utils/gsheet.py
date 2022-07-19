@@ -28,7 +28,7 @@ def get_credentials(scopes: Optional[list] = None) -> Credentials:
     # To obtain a service account JSON file, follow these steps:
     # https://gspread.readthedocs.io/en/latest/oauth2.html#for-bots-using-service-account
     creds = Credentials.from_service_account_file("google_secrets.json")
-    scoped = creds.with_scopes(
+    scoped = creds.with_subject(config.ownerEmail).with_scopes(
         scopes
         or [
             "https://spreadsheets.google.com/feeds",
