@@ -20,8 +20,9 @@ class Config:
         self.prefix = self.config.get("prefix", default_config.get("prefix"))
         self.token = self.config.get("discord_bot_token", default_config.get("discord_bot_token"))
         self.database = os.getenv("DB_DSN")  # for docker
-        self.ownerEmail = self.config.get("owner_email", None)
+        self.owner_email = self.config.get("owner_email", None)
         self.storage = self.config.get("storage", default_config.get("storage"))
+        self.puzzle_addons_path = self.config.get("puzzle_addons_path", None)
         if not self.database:
             self.database = self.config.get("database", default_config.get("database"))
 

@@ -16,6 +16,7 @@ class HuntSettings:
     hunt_puzzle_prefix: str = "puzzle"
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
     drive_parent_id: str = ""       # ID of root drive folder
+    role: str = ""
 
     def to_entity(self, client: datastore.Client):
         key = client.key('Hunt', self.hunt_id, 'Guild', self.guild_id)
@@ -25,6 +26,7 @@ class HuntSettings:
         entity['hunt_url'] = self.hunt_url
         entity['drive_nexus_sheet_id'] = self.drive_nexus_sheet_id
         entity['drive_parent_id'] = self.drive_parent_id
+        entity['role'] = self.role
         return entity
 
     @classmethod
@@ -38,6 +40,7 @@ class HuntSettings:
         hunt.hunt_url = entity['hunt_url']
         hunt.drive_nexus_sheet_id = entity['drive_nexus_sheet_id']
         hunt.drive_parent_id = entity['drive_parent_id']
+        hunt.role = entity['role']
         return hunt
 
 
@@ -49,7 +52,7 @@ class GuildSettings:
     guild_name: str = ""
     discord_bot_channel: str = ""   # Channel to listen for bot commands
     discord_bot_emoji: str = ":ladder: :dog:"  # Short description string or emoji for bot messages
-    discord_use_voice_channels: int = 1  # Whether to create voice channels for puzzles
+    discord_use_voice_channels: bool = False  # Whether to create voice channels for puzzles
     drive_parent_id: str = ""
     drive_resources_id: str = ""    # Document with resources links, etc
     hunt_settings: Dict[int, HuntSettings] = field(default_factory=dict)

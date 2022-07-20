@@ -7,6 +7,7 @@ can be easily disabled; simply omit this file.
 import datetime
 import logging
 import string
+import traceback
 from typing import Optional
 
 import discord
@@ -19,6 +20,7 @@ from bot.utils import urls
 from bot.store import GuildSettingsDb, GuildSettings, MissingPuzzleError, PuzzleData, PuzzleJsonDb
 from bot.utils.gdrive import get_or_create_folder, rename_file
 from bot.utils.gsheet import create_spreadsheet, get_manager
+from bot.utils.appscript import create_project, add_javascript
 from bot.utils.gsheet_nexus import update_nexus
 
 logger = logging.getLogger(__name__)
@@ -106,9 +108,14 @@ class GoogleSheets(commands.Cog):
             # add some helpful links
             await self.add_quick_links_worksheet(spreadsheet, puzzle, settings)
 
+            # add the additional helpers
+            #  proj = await create_project(spreadsheet.id)
+            #  await add_javascript(proj["scriptId"])
+
         except Exception as exc:
             logger.exception(f"Unable to create spreadsheet for {round_name}/{name}")
             await text_channel.send(f":exclamation: Unable to create spreadsheet for {round_name}/{name}: {exc}")
+            #  traceback.print_exc()
             return
 
         return spreadsheet
