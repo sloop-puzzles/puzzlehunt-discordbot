@@ -16,7 +16,7 @@ class HuntSettings:
     hunt_puzzle_prefix: str = "puzzle"
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
     drive_parent_id: str = ""       # ID of root drive folder
-    role: str = ""
+    role_id: int = 0
 
     def to_entity(self, client: datastore.Client):
         key = client.key('Hunt', self.hunt_id, 'Guild', self.guild_id)
@@ -26,7 +26,7 @@ class HuntSettings:
         entity['hunt_url'] = self.hunt_url
         entity['drive_nexus_sheet_id'] = self.drive_nexus_sheet_id
         entity['drive_parent_id'] = self.drive_parent_id
-        entity['role'] = self.role
+        entity['role_id'] = self.role_id
         return entity
 
     @classmethod
@@ -40,7 +40,7 @@ class HuntSettings:
         hunt.hunt_url = entity['hunt_url']
         hunt.drive_nexus_sheet_id = entity['drive_nexus_sheet_id']
         hunt.drive_parent_id = entity['drive_parent_id']
-        hunt.role = entity['role']
+        hunt.role_id = entity['role_id']
         return hunt
 
 
@@ -83,6 +83,7 @@ class GuildSettings:
 
         return guild
 
+
 class _GuildSettingsDb:
     @classmethod
     def get(cls, guild_id: int) -> GuildSettings:
@@ -95,3 +96,4 @@ class _GuildSettingsDb:
     @classmethod
     def commit(cls, settings: GuildSettings):
         pass
+

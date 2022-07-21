@@ -16,6 +16,7 @@ class Puzzles(commands.Cog):
     GENERAL_CHANNEL_NAME = "general"
     META_CHANNEL_NAME = "meta"
     META_REASON = "bot-meta"
+    ROLE_REASON = "bot-role"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
     HUNT_REASON = "bot-hunt-general"
@@ -64,11 +65,15 @@ class Puzzles(commands.Cog):
         if not (await self.check_is_bot_channel(ctx)):
             return
 
+        role = None
+        if ", " in arg:
+            arg, role = arg.split(", ", 1)
         if ":" in arg:
             hunt_name, hunt_url = arg.split(":", 1)
-            return await self.create_hunt(ctx, hunt_name,hunt_url)
+            return await self.create_hunt(ctx, hunt_name, hunt_url, role)
 
-        raise ValueError(f"Unable to parse hunt name {arg}, try using `!h hunt-name: hunt-url`")
+        raise ValueError(f"Unable to parse hunt name {arg}, try using `!h hunt-name:hunt-url`")
+
 
     @commands.command(aliases=["p"])
     async def puzzle(self, ctx, *, arg):
@@ -107,11 +112,16 @@ class Puzzles(commands.Cog):
         category_name = self.clean_name(arg)
         guild = ctx.guild
         category = discord.utils.get(guild.categories, name=category_name)
-        if not category:
-            print(f"Creating a new channel category for round: {category_name}")
-            # TODO: debug position?
-            category = await guild.create_category(category_name, position=len(guild.categories) - 2)
         settings  = GuildSettingsDb.get(guild.id)
+        if not category:
+            hunt_settings = settings.hunt_settings[hunt_id]
+            print(f"Creating a new channel category for round: {category_name}")
+            role = None
+            if hunt_settings.role_id:
+                role = discord.utils.get(guild.roles, id=hunt_settings.role_id)
+            overwrites = get_overwrites(role)
+            # TODO: debug position?
+            category = await guild.create_category(category_name, overwrites=overwrites, position=len(guild.categories) - 2)
         if not category.id in settings.category_mapping:
             settings.category_mapping[category.id] = hunt_id
             GuildSettingsDb.commit(settings)
@@ -220,15 +230,30 @@ class Puzzles(commands.Cog):
 
         return (channel, created)
 
-    async def create_hunt(self, ctx, hunt_name: str, hunt_url: str):
+
+    def get_overwrites(self, guild, role):
+        if not role:
+            return None
+        return {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False, send_messages=False),
+            role: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        }
+
+    async def create_hunt(self, ctx, hunt_name: str, hunt_url: str, role_name: Optional[str] = None):
         guild = ctx.guild
         category_name = self.clean_name(hunt_name)
-        category = await guild.create_category(category_name, position=len(guild.categories) - 2)
+        overwrites = None
+        role = None
+        if role_name:
+            role = guild.create_role(name=role, colour: discord.Colour.random(), mentionable=True, reason=self.ROLE_REASON )
+            overwrites = self.get_overwrites(guild, role)
+
+        category = await guild.create_category(category_name, overwites=overwrites, position=len(guild.categories) - 2)
         text_channel, created_text = await self.get_or_create_channel(
-            guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, channel_type="text", reason=self.HUNT_REASON
+            guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, overwrites=overwrites, channel_type="text", reason=self.HUNT_REASON
         )
         settings = GuildSettingsDb.get(guild.id)
-        solved_category = await guild.create_category(self.get_solved_puzzle_category(hunt_name), position=len(guild.categories) - 2)
+        solved_category = await guild.create_category(self.get_solved_puzzle_category(hunt_name), overwrites=overwrites, position=len(guild.categories) - 2)
 
 
         hs = HuntSettings(
@@ -236,6 +261,9 @@ class Puzzles(commands.Cog):
             hunt_id=category.id,
             hunt_url=hunt_url,
         )
+        if role:
+            hs.role_id=role.id
+
         gsheet_cog = self.bot.get_cog("GoogleSheets")
         print("google sheets cog:", gsheet_cog)
         if gsheet_cog is not None:
@@ -267,11 +295,16 @@ class Puzzles(commands.Cog):
         if not category.id in settings.category_mapping:
             raise ValueError(f"Hunt not found for {category_mapping}")
         hunt_id = settings.category_mapping[category.id]
+        hunt_settings = settings.hunt_settings[hunt_id]
+        role = None
+        if hunt_settings.role_id:
+            role = discord.utils.get(guild.roles, id=hunt_settings.role_id)
+        overwrites = get_overwrites(role)
+
         channel_name = self.clean_name(puzzle_name)
         text_channel, created_text = await self.get_or_create_channel(
-            guild=guild, category=category, channel_name=channel_name, channel_type="text", reason=self.PUZZLE_REASON
+            guild=guild, category=category, channel_name=channel_name, overwrites=overwrites, channel_type="text", reason=self.PUZZLE_REASON
         )
-        settings = GuildSettingsDb.get_cached(guild.id)
         if created_text:
             hunt_settings = settings.hunt_settings[hunt_id]
             puzzle_data = PuzzleData(
@@ -311,7 +344,7 @@ class Puzzles(commands.Cog):
         created_voice = False
         if settings.discord_use_voice_channels:
             voice_channel, created_voice = await self.get_or_create_channel(
-                guild=guild, category=category, channel_name=channel_name, channel_type="voice", reason=self.PUZZLE_REASON
+                guild=guild, category=category, channel_name=channel_name, overwrites=overwrites, channel_type="voice", reason=self.PUZZLE_REASON
             )
             if created_voice:
                 puzzle_data.voice_channel_id = voice_channel.id
