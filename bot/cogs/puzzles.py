@@ -119,7 +119,7 @@ class Puzzles(commands.Cog):
             role = None
             if hunt_settings.role_id:
                 role = discord.utils.get(guild.roles, id=hunt_settings.role_id)
-            overwrites = get_overwrites(role)
+            overwrites = self.get_overwrites(guild, role)
             # TODO: debug position?
             category = await guild.create_category(category_name, overwrites=overwrites, position=len(guild.categories) - 2)
         if not category.id in settings.category_mapping:
@@ -235,8 +235,9 @@ class Puzzles(commands.Cog):
         if not role:
             return None
         return {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False, send_messages=False),
-            role: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            role: discord.PermissionOverwrite(read_messages=True),
+            guild.me: discord.PermissionOverwrite(read_messages=True)
         }
 
     async def create_hunt(self, ctx, hunt_name: str, hunt_url: str, role_name: Optional[str] = None):
@@ -245,10 +246,10 @@ class Puzzles(commands.Cog):
         overwrites = None
         role = None
         if role_name:
-            role = guild.create_role(name=role, colour: discord.Colour.random(), mentionable=True, reason=self.ROLE_REASON )
+            role = await guild.create_role(name=role_name, colour=discord.Colour.random(), mentionable=True, reason=self.ROLE_REASON )
             overwrites = self.get_overwrites(guild, role)
 
-        category = await guild.create_category(category_name, overwites=overwrites, position=len(guild.categories) - 2)
+        category = await guild.create_category(category_name, overwrites=overwrites, position=len(guild.categories) - 2)
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, overwrites=overwrites, channel_type="text", reason=self.HUNT_REASON
         )
@@ -268,7 +269,7 @@ class Puzzles(commands.Cog):
         print("google sheets cog:", gsheet_cog)
         if gsheet_cog is not None:
             # update google sheet ID
-            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_nexus_spreadsheet(text_channel, hunti)
+            nexus_spreadsheet, hunt_folder = await gsheet_cog.create_nexus_spreadsheet(text_channel, hunt_name)
         hs.drive_nexus_sheet_id = nexus_spreadsheet.id
         hs.drive_parent_id = hunt_folder["id"]
         # add hunt settings
@@ -299,7 +300,7 @@ class Puzzles(commands.Cog):
         role = None
         if hunt_settings.role_id:
             role = discord.utils.get(guild.roles, id=hunt_settings.role_id)
-        overwrites = get_overwrites(role)
+        overwrites = self.get_overwrites(guild, role)
 
         channel_name = self.clean_name(puzzle_name)
         text_channel, created_text = await self.get_or_create_channel(
