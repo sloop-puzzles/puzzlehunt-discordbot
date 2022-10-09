@@ -1,5 +1,6 @@
 import datetime
 import logging
+import traceback
 from typing import List, Optional
 
 import discord
@@ -19,6 +20,7 @@ class Puzzles(commands.Cog):
     ROLE_REASON = "bot-role"
     PUZZLE_REASON = "bot-puzzle"
     DELETE_REASON = "bot-delete"
+    CLEANUP_REASON = "bot-cleanup"
     HUNT_REASON = "bot-hunt-general"
     SOLVED_PUZZLES_CATEGORY = "solved"
     PRIORITIES = ["low", "medium", "high", "very high"]
@@ -153,7 +155,7 @@ class Puzzles(commands.Cog):
         guild_id = ctx.guild.id
         settings = GuildSettingsDb.get(guild_id)
         hunt_id = ctx.channel.category.id
-        hunt_name = ctx.chanel.category.name
+        hunt_name = ctx.channel.category.name
         if hunt_id in settings.hunt_settings and hasattr(settings.hunt_settings[hunt_id], setting_key):
             old_value = getattr(settings.hunt_settings[hunt_id], setting_key)
             setattr(settings.hunt_settings[hunt_id], setting_key, setting_value)
@@ -678,6 +680,38 @@ class Puzzles(commands.Cog):
         # delete text channel last so that errors can be reported
         await ctx.channel.delete(reason=self.DELETE_REASON)
 
+    @commands.command()
+    @commands.has_permissions(manage_channels=True)
+    async def cleanup(self, ctx):
+        if ctx.channel.name != self.GENERAL_CHANNEL_NAME:
+            return
+
+        hunt_id = ctx.channel.category.id
+        settings = GuildSettingsDb.get(ctx.guild.id)
+        hunt_settings = settings.hunt_settings[hunt_id]
+        puzzles = PuzzleJsonDb.get_all(ctx.guild.id, hunt_id)
+        solved_category_name = self.get_solved_puzzle_category(hunt_settings.hunt_name)
+        rounds = set()
+        for puzzle in puzzles:
+            channel = discord.utils.get(ctx.guild.channels, id=puzzle.channel_id)
+            rounds.add(puzzle.round_id)
+            if channel:
+                await channel.delete(reason=self.CLEANUP_REASON)
+        await ctx.channel.send("Puzzle channels deleted!")
+        for round_id in rounds:
+            category = discord.utils.get(ctx.guild.categories, id=round_id)
+            if category:
+                await category.delete(reason=self.CLEANUP_REASON)
+
+        await ctx.channel.send("Round categories deleted!")
+        solved_category = discord.utils.get(ctx.guild.categories, name=solved_category_name)
+        if solved_category:
+            await solved_category.delete(reason=self.CLEANUP_REASON)
+        past_hunts_category = discord.utils.get(ctx.guild.categories, id=settings.past_hunts_category_id)
+        await ctx.channel.category.delete(reason=self.CLEANUP_REASON)
+        if past_hunts_category:
+            await ctx.channel.edit(name=hunt_settings.hunt_name, category=past_hunts_category)
+        await ctx.channel.send("Cleanup complete")
     # async def confirm_delete(self, ctx):
     #     ref: https://github.com/stroupbslayen/discord-pretty-help/blob/master/pretty_help/pretty_help.py
     #     embed = discord.Embed(description="Are you sure you wish to delete this channel? All of this channel's contents will be permanently deleted.")
