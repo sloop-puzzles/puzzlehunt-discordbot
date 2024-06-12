@@ -1,11 +1,7 @@
 import datetime
 import logging
-<<<<<<< main
 from typing import Any, List, Optional
-=======
 import traceback
-from typing import List, Optional
->>>>>>> main
 
 import discord
 from discord.ext import commands, tasks
