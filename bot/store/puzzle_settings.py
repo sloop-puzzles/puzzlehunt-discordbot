@@ -57,6 +57,7 @@ class GuildSettings:
     drive_resources_id: str = ""    # Document with resources links, etc
     hunt_settings: Dict[int, HuntSettings] = field(default_factory=dict)
     category_mapping: Dict[int, int] = field(default_factory=dict)
+    past_hunts_category_id: int = 0
 
     def to_entity(self, client: datastore.Client):
         key = client.key('Guild', self.guild_id)
@@ -67,6 +68,7 @@ class GuildSettings:
         entity['discord_use_voice_channels'] = self.discord_use_voice_channels
         entity['drive_parent_id'] = self.drive_parent_id
         entity['drive_resources_id'] = self.drive_resources_id
+        entity['past_hunts_category_id'] = self.past_hunts_category_id
         return entity
 
     @classmethod
@@ -80,6 +82,7 @@ class GuildSettings:
         guild.discord_use_voice_channels = entity['discord_use_voice_channels']
         guild.drive_parent_id = entity['drive_parent_id']
         guild.drive_resources_id = entity['drive_resources_id']
+        guild.past_hunts_category_id = entity['past_hunts_category_id']
 
         return guild
 
