@@ -9,9 +9,31 @@ To keep things very simple (and because I started this a week before Hunt starts
 
 # Usage
 
+## Creating a hunt
+
+For example, run the command
+
+`!hunt MysteryHunt2021:https://perpendicular.institute/`
+
+This hunt URL will be used to guess the link to the puzzle when new puzzles are posted. If the generated
+puzzle link is wrong, it can be updated by posting `!link https://correct-hunt-website-link` in the puzzle channel.
+
+Users with the `manage_channel` role can update administrative settings via `!update_setting {key} {value}`, where
+all of the settings can be viewed via `!show_settings`.
+
+There are also various settings and links to Google Drive that should be updated prior to the start of hunt,
+like
+
+- `drive_parent_id`: the Google drive ID of the parent folder the hunt will be created under
+- `drive_resources_id`: optional, Google drive ID of a resources Google doc
+- `discord_bot_channel`: if set, most bot commands must be entered in that channel name
+- `discord_use_voice_channels`: false by default; if true, voice channels are created alongside text channels
+
+## During hunt
+
 Most users will just need to become familiar with two commands:
 1. To post a new puzzle channel, post `!p puzzle-name` in the `#meta` channel of the corresponding puzzle round.
-   This will create a new text and voice channel where puzzle discussion can take place, as well as
+   This will create a new text channel where puzzle discussion can take place, as well as
    a new Google Spreadsheet with a handy `Quick Links` worksheet.
    You can scroll the sidebar or use `Ctrl + K` to help search for existing puzzle channels.
 2. When Hunt HQ has confirmed that the puzzle has been solved, post `!solve SOLUTION` in the puzzle channel.
@@ -24,7 +46,7 @@ For a new round/world of puzzles, first start by posting `!round` in the `#bot` 
 !r puzzle-round-name
 ```
 This will create a `#puzzleround-name` [category](https://support.discord.com/hc/en-us/articles/115001580171-Channel-Categories-101)
-along with a `#meta` puzzle text and voice channel for the round. The `#meta` channels are the place for general discussion about the round,
+along with a `#meta` puzzle text for the round. The `#meta` channels are the place for general discussion about the round,
 as well as discussion about the meta puzzle (if there is more than one meta, creating new puzzle channels would be prudent).
 
 For a new puzzle, one can either post the puzzle via `!puzzle` in the `#bot` channel:
@@ -43,21 +65,10 @@ These fields are mainly for others to easily find out about the status of other 
 on the discord channels using the corresponding commands (see `!info` for the available commands), or viewed
 in aggregate on the Nexus spreadsheet, where all puzzles and links are listed.
 
-## Admin
-
-Users with the `manage_channel` role can update administrative settings via `!update_setting {key} {value}`, where
-all of the settings can be viewed via `!show_settings`. At the start of hunt, an admin should set
-`!update_setting hunt_url https://hunt-website/puzzle/` to the base url where puzzles can be found.
-This hunt url will be used to guess the link to the puzzle when new puzzles are posted. If the generated
-puzzle link is wrong, it can be updated by posting `!link https://correct-hunt-website-link` in the puzzle channel.
-
-There are also various links to Google Drive that should be updated prior to the start of hunt,
-like the IDs of the root Google Drive folder, Resources document, and Nexus spreadsheet.
-
 ## Google Drive
 
 When a puzzle channel is created, if Google Drive integration is enabled, a corresponding spreadsheet is created
-in the a folder for the puzzle round in the root Google Drive directory. The spreadsheet will have a secondary
+in the folder for the puzzle round in the root Google Drive directory. The spreadsheet will have a secondary
 "Quick Links" tab created for convenience.
 
 ![Puzzle spreadsheet Quick Links tab example](docs/gsheet_puzzle_quick_links.png)
@@ -67,6 +78,7 @@ such as the puzzle url, spreadsheet link. (The formatting of the nexus spreadshe
 the bot only populates the contents of the spreadsheet cells.)
 
 ![Nexus spreadsheet example](docs/gsheet_nexus_example.png)
+
 # Setup
 
 Clone this repository

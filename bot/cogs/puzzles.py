@@ -1,7 +1,7 @@
 import datetime
 import logging
+from typing import Any, List, Optional
 import traceback
-from typing import List, Optional
 
 import discord
 from discord.ext import commands, tasks
@@ -44,7 +44,7 @@ class Puzzles(commands.Cog):
     async def on_command_error(self, ctx, error):
         # if isinstance(error, commands.errors.CheckFailure):
         #     await ctx.send('You do not have the correct role for this command.')
-        await ctx.send(":exclamation: " + str(error))
+        await ctx.send(f":exclamation: **{type(error).__name__}**" + "\n" + str(error))
 
     async def check_is_bot_channel(self, ctx) -> bool:
         """Check if command was sent to bot channel configured in settings"""
@@ -123,7 +123,7 @@ class Puzzles(commands.Cog):
                 role = discord.utils.get(guild.roles, id=hunt_settings.role_id)
             overwrites = self.get_overwrites(guild, role)
             # TODO: debug position?
-            category = await guild.create_category(category_name, overwrites=overwrites, position=len(guild.categories) - 2)
+            category = await guild.create_category(category_name, overwrites=overwrites, position=max(len(guild.categories) - 2,0))
         if not category.id in settings.category_mapping:
             settings.category_mapping[category.id] = hunt_id
             GuildSettingsDb.commit(settings)
@@ -163,9 +163,31 @@ class Puzzles(commands.Cog):
             await ctx.send(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}` for hunt `{hunt_name}`")
         elif hasattr(settings, setting_key):
             old_value = getattr(settings, setting_key)
-            setattr(settings, setting_key, setting_value)
+            value: Any
+            if type(old_value) == str:
+                value = setting_value
+                setattr(settings, setting_key, setting_value)
+            elif type(old_value) == int:
+                try:
+                    value = int(setting_value)
+                except ValueError:
+                    await ctx.send(f":x: Cannot set `{setting_key}={setting_value}`, needs integer input.")
+                    return
+            elif type(old_value) == bool:
+                if setting_value.strip().lower() in ('false', '0'):
+                    value = False
+                elif setting_value.strip().lower() in ('true', '1'):
+                    value = True
+                else:
+                    await ctx.send(f":x: Cannot set `{setting_key}={setting_value}`, needs boolean input (0, 1, true, false).")
+                    return
+            else:
+                await ctx.send(f":x: `{setting_key}` is type `{type(old_value).__name__}` and cannot be set from this command.")
+                return
+
+            setattr(settings, setting_key, value)
             GuildSettingsDb.commit(settings)
-            await ctx.send(f":white_check_mark: Updated `{setting_key}={setting_value}` from old value: `{old_value}`")
+            await ctx.send(f":white_check_mark: Updated `{setting_key}={value}` from old value: `{old_value}`")
         else:
             await ctx.send(f":exclamation: Unrecognized setting key: `{setting_key}`. Use `!show_settings` for more info.")
 
@@ -251,12 +273,12 @@ class Puzzles(commands.Cog):
             role = await guild.create_role(name=role_name, colour=discord.Colour.random(), mentionable=True, reason=self.ROLE_REASON )
             overwrites = self.get_overwrites(guild, role)
 
-        category = await guild.create_category(category_name, overwrites=overwrites, position=len(guild.categories) - 2)
+        category = await guild.create_category(category_name, overwrites=overwrites, position=max(len(guild.categories) - 2,0))
         text_channel, created_text = await self.get_or_create_channel(
             guild=guild, category=category, channel_name=self.GENERAL_CHANNEL_NAME, overwrites=overwrites, channel_type="text", reason=self.HUNT_REASON
         )
         settings = GuildSettingsDb.get(guild.id)
-        solved_category = await guild.create_category(self.get_solved_puzzle_category(hunt_name), overwrites=overwrites, position=len(guild.categories) - 2)
+        solved_category = await guild.create_category(self.get_solved_puzzle_category(hunt_name), overwrites=overwrites, position=max(len(guild.categories) - 2,0))
 
 
         hs = HuntSettings(
