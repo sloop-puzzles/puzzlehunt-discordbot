@@ -58,6 +58,7 @@ class GuildSettings:
     hunt_settings: Dict[int, HuntSettings] = field(default_factory=dict)
     category_mapping: Dict[int, int] = field(default_factory=dict)
     past_hunts_category_id: int = 0
+    drive_starter_sheet_id: str = ""
 
     def to_entity(self, client: datastore.Client):
         key = client.key('Guild', self.guild_id)
@@ -69,6 +70,7 @@ class GuildSettings:
         entity['drive_parent_id'] = self.drive_parent_id
         entity['drive_resources_id'] = self.drive_resources_id
         entity['past_hunts_category_id'] = self.past_hunts_category_id
+        entity['sheet_tempalte_id'] = self.drive_starter_sheet_id
         return entity
 
     @classmethod
@@ -83,6 +85,7 @@ class GuildSettings:
         guild.drive_parent_id = entity['drive_parent_id']
         guild.drive_resources_id = entity['drive_resources_id']
         guild.past_hunts_category_id = entity['past_hunts_category_id']
+        guild.puzzle_template_id = entity['drive_starter_sheet_id']
 
         return guild
 

@@ -820,5 +820,5 @@ class Puzzles(commands.Cog):
         await self.bot.wait_until_ready()
         logger.info("Ready to start archiving solved puzzles")
 
-def setup(bot):
-    bot.add_cog(Puzzles(bot))
+async def setup(bot):
+    await bot.add_cog(Puzzles(bot))
