@@ -19,7 +19,7 @@ import pytz
 from bot.utils import urls
 from bot.store import GuildSettingsDb, GuildSettings, MissingPuzzleError, PuzzleData, PuzzleJsonDb
 from bot.utils.gdrive import get_or_create_folder, rename_file
-from bot.utils.gsheet import create_spreadsheet, get_manager
+from bot.utils.gsheet import create_spreadsheet, copy_spreadsheet, get_manager
 from bot.utils.appscript import create_project, add_javascript
 from bot.utils.gsheet_nexus import update_nexus
 
@@ -87,7 +87,10 @@ class GoogleSheets(commands.Cog):
             )
             round_folder_id = round_folder["id"]
 
-            spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
+            if settings.drive_starter_sheet_id:
+                spreadsheet = await copy_spreadsheet(agcm=self.agcm, source_id=settings.drive_starter_sheet_id, title=name, folder_id=round_folder_id)
+            else:
+                spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
             puzzle.google_folder_id = round_folder_id
             puzzle.google_sheet_id = spreadsheet.id
             PuzzleJsonDb.commit(puzzle)
@@ -173,7 +176,7 @@ class GoogleSheets(commands.Cog):
         print("Ready to start updating nexus spreadsheet")
 
 
-def setup(bot):
+async def setup(bot):
     # Comment this out if google-drive-related package are not installed!
-    bot.add_cog(GoogleSheets(bot))
+    await bot.add_cog(GoogleSheets(bot))
 
