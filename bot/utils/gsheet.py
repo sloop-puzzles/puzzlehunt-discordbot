@@ -70,6 +70,14 @@ async def copy_spreadsheet(
     agc._ss_cache_title[title] = sheet
     agc._ss_cache_key[ss.id] = sheet
 
+
+    # Clean out existing worksheets and replace with a default blank sheet
+    await sheet.add_worksheet("Sheet 1", 1000, 26, index=0)
+
+    for ws in await sheet.worksheets():
+        if ws.title != "Sheet 1":
+            await sheet.del_worksheet(ws);
+
     if share_anyone:
         # Allow anyone with the URL to write to this spreadsheet.
         await agc.insert_permission(sheet.id, None, perm_type="anyone", role="writer")
