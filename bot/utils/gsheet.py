@@ -74,9 +74,7 @@ async def copy_spreadsheet(
     # Clean out existing worksheets and replace with a default blank sheet
     await sheet.add_worksheet("Sheet 1", 1000, 26, index=0)
 
-    for ws in await sheet.worksheets():
-        if ws.title != "Sheet 1":
-            await sheet.del_worksheet(ws);
+    await asyncio.gather(*[sheet.del_worksheet(ws) for ws in await sheet.worksheets() if ws.title != "Sheet 1"])
 
     if share_anyone:
         # Allow anyone with the URL to write to this spreadsheet.
