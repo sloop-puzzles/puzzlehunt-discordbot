@@ -89,6 +89,7 @@ class GoogleSheets(commands.Cog):
 
             if settings.drive_starter_sheet_id:
                 spreadsheet = await copy_spreadsheet(agcm=self.agcm, source_id=settings.drive_starter_sheet_id, title=name, folder_id=round_folder_id)
+                await self.clear_spreadsheet(spreadsheet)
             else:
                 spreadsheet = await create_spreadsheet(agcm=self.agcm, title=name, folder_id=round_folder_id)
             puzzle.google_folder_id = round_folder_id
@@ -122,6 +123,19 @@ class GoogleSheets(commands.Cog):
             return
 
         return spreadsheet
+
+    async def clear_spreadsheet(self, spreadsheet: gspread_asyncio.AsyncioGspreadSpreadsheet):
+        await spreadsheet.add_worksheet("Sheet 1", 1000, 26, index=0)
+
+        body = {
+            "requests": [{
+                "deleteSheet": {
+                    "sheetId": ws.id
+                }
+            } for ws in await spreadsheet.worksheets() if ws.title != "Sheet 1"]
+        }
+
+        await spreadsheet.batch_update(body)
 
     def update_cell_row(self, cell_range, row: int, key: str, value: str):
         """Update key-value row cell contents; row starts from 1"""

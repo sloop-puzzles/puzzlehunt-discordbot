@@ -46,6 +46,7 @@ def get_manager() -> gspread_asyncio.AsyncioGspreadClientManager:
 def spreadsheet_link(sheet_id: str):
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
 
+
 async def copy_spreadsheet(
     agcm: gspread_asyncio.AsyncioGspreadClientManager,
     source_id: str,
@@ -69,12 +70,6 @@ async def copy_spreadsheet(
     sheet = gspread_asyncio.AsyncioGspreadSpreadsheet(agc.agcm, ss)
     agc._ss_cache_title[title] = sheet
     agc._ss_cache_key[ss.id] = sheet
-
-
-    # Clean out existing worksheets and replace with a default blank sheet
-    await sheet.add_worksheet("Sheet 1", 1000, 26, index=0)
-
-    await asyncio.gather(*[sheet.del_worksheet(ws) for ws in await sheet.worksheets() if ws.title != "Sheet 1"])
 
     if share_anyone:
         # Allow anyone with the URL to write to this spreadsheet.
