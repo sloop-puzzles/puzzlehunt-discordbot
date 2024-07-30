@@ -231,7 +231,7 @@ class Puzzles(commands.Cog):
             await ctx.send(embed=embed)
 
     async def get_or_create_channel(
-        self, guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
+        self, guild: discord.Guild, category: discord.CategoryChannel, channel_name: str, channel_type, **kwargs
     ):
         """Retrieve given channel by name/category or create one"""
         if channel_type == "text":
@@ -253,6 +253,20 @@ class Puzzles(commands.Cog):
             created = True
 
         return (channel, created)
+
+    async def get_or_create_category(
+        self, hunt_settings, guild: discord.Guild, category_name: str
+    ):
+            category = discord.utils.get(guild.categories, name=category_name)
+            created = False
+            if not category:
+                role = None
+                if hunt_settings.role_id:
+                    role = discord.utils.get(guild.roles, id=hunt_settings.role_id)
+                overwrites = self.get_overwrites(guild, role)
+                category = await guild.create_category(category_name, overwrites=overwrites, position=max(len(guild.categories) - 2,0))
+                created = True
+            return (category, created)
 
 
     def get_overwrites(self, guild, role):
@@ -760,23 +774,34 @@ class Puzzles(commands.Cog):
         to start with the text [SOLVED]
         """
         puzzles_to_archive = PuzzleJsonDb.get_solved_puzzles_to_archive(guild.id)
+        settings  = GuildSettingsDb.get_cached(guild.id)
 
         gsheet_cog = self.bot.get_cog("GoogleSheets")
 
         puzzles_by_hunt = {}
         for puzz in puzzles_to_archive:
             if not puzz.hunt_id in puzzles_by_hunt:
-                puzzles_by_hunt[puzz.hunt_name] = []
-            puzzles_by_hunt[puzz.hunt_name].append(puzz)
+                puzzles_by_hunt[puzz.hunt_id] = []
+            puzzles_by_hunt[puzz.hunt_id].append(puzz)
 
-        for hunt_name, puzzles in puzzles_by_hunt.items():
-            solved_category_name = self.get_solved_puzzle_category(hunt_name)
-            solved_category = discord.utils.get(guild.categories, name=solved_category_name)
+        for hunt_id, puzzles in puzzles_by_hunt.items():
+            hunt_settings = settings.hunt_settings[int(hunt_id)]
+            solved_category_name = self.get_solved_puzzle_category(hunt_settings.hunt_name)
+
+            suffix=""
+            while True:
+                solved_category, _ = await self.get_or_create_category(hunt_settings, guild, solved_category_name + suffix)
+                if len(solved_category.channels) < 50:
+                    break
+                suffix = 2 if suffix == "" else suffix + 1
+
+
             if not solved_category:
                 avail_categories = [c.name for c in guild.categories]
                 raise ValueError(
                     f"{solved_category_name} category does not exist; available categories: {avail_categories}"
             )
+
 
             for puzzle in puzzles:
                 channel = discord.utils.get(
