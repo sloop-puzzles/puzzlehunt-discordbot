@@ -788,13 +788,14 @@ class Puzzles(commands.Cog):
             hunt_settings = settings.hunt_settings[int(hunt_id)]
             solved_category_name = self.get_solved_puzzle_category(hunt_settings.hunt_name)
 
+            count=1
             suffix=""
             while True:
-                solved_category, _ = await self.get_or_create_category(hunt_settings, guild, solved_category_name + suffix)
+                solved_category, _ = await self.get_or_create_category(hunt_settings, guild, f"{solved_category_name}{suffix}")
                 if len(solved_category.channels) < 50:
                     break
-                suffix = 2 if suffix == "" else suffix + 1
-
+                count += 1
+                suffix = f"-{count}"
 
             if not solved_category:
                 avail_categories = [c.name for c in guild.categories]
