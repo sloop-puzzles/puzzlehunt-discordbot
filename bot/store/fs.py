@@ -56,13 +56,16 @@ class FilePuzzleJsonDb(_PuzzleJsonDb):
 
     def get(self, guild_id, puzzle_id, round_id, hunt_id) -> PuzzleData:
         try:
-            with self.puzzle_path(puzzle_id, hunt_id=hunt_id, round_id=round_id, guild_id=guild_id).open() as fp:
+            path = self.puzzle_path(puzzle_id, hunt_id=hunt_id, round_id=round_id, guild_id=guild_id)
+            p = next(self.dir_path.rglob(f"{guild_id}/{hunt_id}/*/{puzzle_id}.json")) if "*" in str(path) else path
+            with p.open() as fp:
                 return PuzzleData.from_json(fp.read())
         except (IOError, OSError) as exc:
             # can also just catch FileNotFoundError
             if exc.errno == errno.ENOENT:
                 raise MissingPuzzleError(f"Unable to find puzzle {puzzle_id} for {round_id}")
             raise
+
 
     def get_all(self, guild_id, hunt_id="*") -> List[PuzzleData]:
         paths = self.dir_path.rglob(f"{guild_id}/{hunt_id}/*/*.json")

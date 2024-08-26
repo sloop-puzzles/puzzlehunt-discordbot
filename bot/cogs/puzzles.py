@@ -293,6 +293,7 @@ class Puzzles(commands.Cog):
         )
         settings = GuildSettingsDb.get(guild.id)
         solved_category = await guild.create_category(self.get_solved_puzzle_category(hunt_name), overwrites=overwrites, position=max(len(guild.categories) - 2,0))
+        settings.category_mapping[solved_category.id] = category.id
 
 
         hs = HuntSettings(
@@ -482,6 +483,9 @@ class Puzzles(commands.Cog):
         puzzle_name = channel.name
         settings = GuildSettingsDb.get_cached(guild_id)
         hunt_id = settings.category_mapping[channel.category.id]
+
+        if round_name.startswith(self.get_solved_puzzle_category(settings.hunt_settings[hunt_id].hunt_name)):
+            round_id = "*"
         try:
             return PuzzleJsonDb.get(guild_id, puzzle_id, round_id, hunt_id)
         except MissingPuzzleError:
@@ -740,9 +744,17 @@ class Puzzles(commands.Cog):
                 await category.delete(reason=self.CLEANUP_REASON)
 
         await ctx.channel.send("Round categories deleted!")
-        solved_category = discord.utils.get(ctx.guild.categories, name=solved_category_name)
-        if solved_category:
-            await solved_category.delete(reason=self.CLEANUP_REASON)
+
+        count=1
+        suffix=""
+        while True:
+            solved_category = discord.utils.get(ctx.guild.categories, name=f"{solved_category_name}{suffix}")
+            if solved_category:
+                await solved_category.delete(reason=self.CLEANUP_REASON)
+                count += 1
+                suffix = f"-{count}"
+            else:
+                break
         past_hunts_category = discord.utils.get(ctx.guild.categories, id=settings.past_hunts_category_id)
         await ctx.channel.category.delete(reason=self.CLEANUP_REASON)
         if past_hunts_category:
@@ -791,7 +803,10 @@ class Puzzles(commands.Cog):
             count=1
             suffix=""
             while True:
-                solved_category, _ = await self.get_or_create_category(hunt_settings, guild, f"{solved_category_name}{suffix}")
+                solved_category, created = await self.get_or_create_category(hunt_settings, guild, f"{solved_category_name}{suffix}")
+                if created:
+                    settings.category_mapping[solved_category.id] = hunt_id
+                    GuildSettingsDb.commit(settings)
                 if len(solved_category.channels) < 50:
                     break
                 count += 1
