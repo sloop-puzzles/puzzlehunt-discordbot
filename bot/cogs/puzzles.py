@@ -79,28 +79,26 @@ class Puzzles(commands.Cog):
 
     @commands.command(aliases=["p"])
     async def puzzle(self, ctx, *, arg):
-        """*Create new puzzle channels: !p round-name: puzzle-name*
+        """*Create new puzzle channels: !p round-name: puzzle-name, puzzle-url*
 
         Can be posted in either a #meta channel or the bot channel
         """
         guild = ctx.guild
+
+        puzzle_url = None
+        if ", " in arg:
+            arg, puzzle_url = arg.split(", ", 1)
         if ctx.channel.name == "meta":
-            category = ctx.channel.category
-            if ":" in arg:
-                round_name, puzzle_name = arg.split(":", 1)
-                if self.clean_name(round_name) != category:
-                    # Check current category matches given round name
-                    raise ValueError(f"Unexpected round: {round_name}, expected: {category.name}")
-            else:
-                puzzle_name = arg
-            return await self.create_puzzle_channel(ctx, category.name, puzzle_name)
+            round_name = ctx.channel.category.name
+            puzzle_name = arg
+            return await self.create_puzzle_channel(ctx,round_name, puzzle_name, puzzle_url)
 
         if not (await self.check_is_bot_channel(ctx)):
             return
 
         if ":" in arg:
             round_name, puzzle_name = arg.split(":", 1)
-            return await self.create_puzzle_channel(ctx, round_name, puzzle_name)
+            return await self.create_puzzle_channel(ctx, round_name, puzzle_name, puzzle_url)
 
         raise ValueError(f"Unable to parse puzzle name {arg}, try using `!p round-name: puzzle-name`")
 
@@ -319,7 +317,7 @@ class Puzzles(commands.Cog):
         return (category, text_channel, True)
 
 
-    async def create_puzzle_channel(self, ctx, round_name: str, puzzle_name: str):
+    async def create_puzzle_channel(self, ctx, round_name: str, puzzle_name: str, puzzle_url: Optional[str] = None):
         """Create new text channel for puzzle, and optionally a voice channel
 
         Save puzzle metadata to data_dir, send initial messages to channel, and
@@ -358,7 +356,9 @@ class Puzzles(commands.Cog):
                 channel_id=text_channel.id,
                 start_time=datetime.datetime.now(tz=pytz.UTC),
             )
-            if hunt_settings.hunt_url:
+            if puzzle_url:
+                puzzle_data.hunt_url = puzzle_url
+            elif hunt_settings.hunt_url:
                 # NOTE: this is a heuristic and may need to be updated!
                 # This is based on last year's URLs, where the URL format was
                 # https://<site>/puzzle/puzzle_name
