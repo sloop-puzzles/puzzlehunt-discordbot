@@ -7,13 +7,14 @@ import discord
 from discord.ext import commands, tasks
 import pytz
 
+from bot.base_cog import BaseCog
 from bot.utils import urls
 from bot.store import MissingPuzzleError, PuzzleData, PuzzleJsonDb, GuildSettings, GuildSettingsDb, HuntSettings
 
 logger = logging.getLogger(__name__)
 
 
-class Puzzles(commands.Cog):
+class Puzzles(BaseCog):
     GENERAL_CHANNEL_NAME = "general"
     META_CHANNEL_NAME = "meta"
     META_REASON = "bot-meta"
@@ -29,10 +30,6 @@ class Puzzles(commands.Cog):
         self.bot = bot
         self.archived_solved_puzzles_loop.start()
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{type(self).__name__} Cog ready.")
-
     def clean_name(self, name):
         """Cleanup name to be appropriate for discord channel"""
         name = name.strip()
@@ -40,26 +37,6 @@ class Puzzles(commands.Cog):
             name = name[1:-1]
         return "-".join(name.lower().split())
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        # if isinstance(error, commands.errors.CheckFailure):
-        #     await ctx.send('You do not have the correct role for this command.')
-        await ctx.send(f":exclamation: **{type(error).__name__}**" + "\n" + str(error))
-
-    async def check_is_bot_channel(self, ctx) -> bool:
-        """Check if command was sent to bot channel configured in settings"""
-        settings = GuildSettingsDb.get_cached(ctx.guild.id)
-        if not settings.discord_bot_channel:
-            # If no channel is designated, then all channels are fine
-            # to listen to commands.
-            return True
-
-        if ctx.channel.name == settings.discord_bot_channel:
-            # Channel name matches setting (note, channel name might not be unique)
-            return True
-
-        await ctx.send(f":exclamation: Most bot commands should be sent to #{settings.discord_bot_channel}")
-        return False
 
     @commands.command(aliases=["h"])
     async def hunt(self, ctx, *, arg):
@@ -467,30 +444,6 @@ class Puzzles(commands.Cog):
     def get_solved_puzzle_category(self, hunt_name):
         return f"{hunt_name}-{self.SOLVED_PUZZLES_CATEGORY}"
 
-
-    def get_puzzle_data_from_channel(self, channel) -> Optional[PuzzleData]:
-        """Extract puzzle data based on the channel name and category name
-
-        Looks up the corresponding JSON data
-        """
-        if not channel.category:
-            return None
-
-        guild_id = channel.guild.id
-        round_id = channel.category.id
-        round_name = channel.category.name
-        puzzle_id = channel.id
-        puzzle_name = channel.name
-        settings = GuildSettingsDb.get_cached(guild_id)
-        hunt_id = settings.category_mapping[channel.category.id]
-
-        if round_name.startswith(self.get_solved_puzzle_category(settings.hunt_settings[hunt_id].hunt_name)):
-            round_id = "*"
-        try:
-            return PuzzleJsonDb.get(guild_id, puzzle_id, round_id, hunt_id)
-        except MissingPuzzleError:
-            print(f"Unable to retrieve puzzle={puzzle_id} round={round_id} {round_name}/{puzzle_name}")
-            return None
 
     @commands.command()
     async def info(self, ctx):

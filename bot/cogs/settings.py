@@ -10,15 +10,12 @@ from discord.ext import commands
 import bot.database as db
 from bot.database.models import Guild
 from bot.utils import get_guild_prefix
+from bot.base_cog import BaseCog
 
 
-class Settings(commands.Cog):
+class Settings(BaseCog):
     def __init__(self, bot):
         self.bot = bot
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{type(self).__name__} Cog ready.")
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):

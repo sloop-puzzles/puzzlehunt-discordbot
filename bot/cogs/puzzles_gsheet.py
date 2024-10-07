@@ -16,6 +16,7 @@ import gspread_asyncio
 import gspread_formatting
 import pytz
 
+from bot.base_cog import BaseCog
 from bot.utils import urls
 from bot.store import GuildSettingsDb, GuildSettings, MissingPuzzleError, PuzzleData, PuzzleJsonDb
 from bot.utils.gdrive import get_or_create_folder, rename_file
@@ -26,16 +27,12 @@ from bot.utils.gsheet_nexus import update_nexus
 logger = logging.getLogger(__name__)
 
 
-class GoogleSheets(commands.Cog):
+class GoogleSheets(BaseCog):
     agcm = get_manager()
 
     def __init__(self, bot):
         self.bot = bot
         self.refresh_nexus.start()
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print(f"{type(self).__name__} Cog ready.")
 
     def cap_name(self, name):
         """Capitalize name for easy comprehension"""

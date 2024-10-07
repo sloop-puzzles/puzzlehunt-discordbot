@@ -6,11 +6,12 @@ import discord
 from discord.ext import commands
 
 from bot import utils
+from bot.base_cog import BaseCog
 
 PY_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
 
-class Utility(commands.Cog):
+class Utility(BaseCog):
     def __init__(self, bot):
         self.bot = bot
         self.start_time = datetime.now().replace(microsecond=0)
