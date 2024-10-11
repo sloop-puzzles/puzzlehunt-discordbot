@@ -177,7 +177,7 @@ class GoogleSheets(BaseCog):
         for guild in self.bot.guilds:
             settings = GuildSettingsDb.get_cached(guild.id)
             for key, hs in settings.hunt_settings.items():
-                if hs.drive_nexus_sheet_id:
+                if hs.drive_nexus_sheet_id and hs.end_time is None:
                     puzzles = PuzzleJsonDb.get_all(guild.id, key)
                     await update_nexus(agcm=self.agcm, file_id=hs.drive_nexus_sheet_id, puzzles=puzzles)
 

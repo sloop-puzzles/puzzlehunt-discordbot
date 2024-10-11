@@ -1,8 +1,9 @@
+import datetime
 from dataclasses import dataclass, field
-from google.cloud import datastore
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from dataclasses_json import dataclass_json
+from google.cloud import datastore
 
 
 @dataclass_json
@@ -17,6 +18,8 @@ class HuntSettings:
     drive_nexus_sheet_id: str = ""  # Refer to gsheet_nexus.py
     drive_parent_id: str = ""       # ID of root drive folder
     role_id: int = 0
+    end_time: Optional[datetime.datetime] = None             # End time of the hunt
+    start_time: Optional[datetime.datetime] = None           # Start time of the hunt
 
     def to_entity(self, client: datastore.Client):
         key = client.key('Hunt', self.hunt_id, 'Guild', self.guild_id)
@@ -27,20 +30,24 @@ class HuntSettings:
         entity['drive_nexus_sheet_id'] = self.drive_nexus_sheet_id
         entity['drive_parent_id'] = self.drive_parent_id
         entity['role_id'] = self.role_id
+        entity['start_time'] = self.start_time
+        entity['end_time'] = self.end_time
         return entity
 
     @classmethod
     def from_entity(cls, entity: datastore.Entity):
         hunt = HuntSettings()
 
-        hunt.hunt_id = hunt.key.id_or_name
-        hunt.guild_id = hunt.key.parent.id_or_name
+        hunt.hunt_id = entity.key.id_or_name
+        hunt.guild_id = entity.parent.id_or_name
         hunt.hunt_url_sep = entity['hunt_url_sep']
         hunt.hunt_name = entity['hunt_name']
         hunt.hunt_url = entity['hunt_url']
         hunt.drive_nexus_sheet_id = entity['drive_nexus_sheet_id']
         hunt.drive_parent_id = entity['drive_parent_id']
         hunt.role_id = entity['role_id']
+        hunt.start_time = entity['start_time']
+        hunt.end_time = entity['end_time']
         return hunt
 
 

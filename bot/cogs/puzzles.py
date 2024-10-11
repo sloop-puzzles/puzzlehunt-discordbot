@@ -1,15 +1,15 @@
 import datetime
 import logging
-from typing import Any, List, Optional
 import traceback
+from typing import Any, List, Optional
 
 import discord
-from discord.ext import commands, tasks
 import pytz
-
 from bot.base_cog import BaseCog
+from bot.store import (GuildSettings, GuildSettingsDb, HuntSettings,
+                       MissingPuzzleError, PuzzleData, PuzzleJsonDb)
 from bot.utils import urls
-from bot.store import MissingPuzzleError, PuzzleData, PuzzleJsonDb, GuildSettings, GuildSettingsDb, HuntSettings
+from discord.ext import commands, tasks
 
 logger = logging.getLogger(__name__)
 
@@ -275,6 +275,7 @@ class Puzzles(BaseCog):
             hunt_name=hunt_name,
             hunt_id=category.id,
             hunt_url=hunt_url,
+            start_time=datetime.datetime.now(tz=pytz.UTC),
         )
         if role:
             hs.role_id=role.id
@@ -701,6 +702,8 @@ class Puzzles(BaseCog):
         puzzles = PuzzleJsonDb.get_all(ctx.guild.id, hunt_id)
         solved_category_name = self.get_solved_puzzle_category(hunt_settings.hunt_name)
         rounds = set()
+        setattr(hunt_settings, "end_time", datetime.datetime.now(tz=pytz.UTC))
+        GuildSettingsDb.commit(settings)
         for puzzle in puzzles:
             channel = discord.utils.get(ctx.guild.channels, id=puzzle.channel_id)
             rounds.add(puzzle.round_id)
