@@ -777,7 +777,7 @@ class Puzzles(BaseCog):
             while True:
                 solved_category, created = await self.get_or_create_category(hunt_settings, guild, f"{solved_category_name}{suffix}")
                 if created:
-                    settings.category_mapping[solved_category.id] = hunt_id
+                    settings.category_mapping[solved_category.id] = int(hunt_id)
                     GuildSettingsDb.commit(settings)
                 if len(solved_category.channels) < 50:
                     break
