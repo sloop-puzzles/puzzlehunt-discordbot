@@ -6,14 +6,13 @@ import string
 from typing import List, Optional
 
 import gspread_asyncio
-
-from bot.utils import urls
 from bot.store import PuzzleData
+from bot.utils import urls
 
 logger = logging.getLogger(__name__)
 
 
-HEADER_ROW = 2
+HEADER_ROW = 1
 COLUMNS = [
     "name",
     "round_name",
@@ -67,6 +66,7 @@ if __name__ == "__main__":
     # python -m bot.utils.gsheet_nexus --sheet [] --guild []
     import argparse
     import asyncio
+
     from bot.utils.gsheet import get_credentials
     from bot.utils.puzzles_data import PuzzleJsonDb
 
