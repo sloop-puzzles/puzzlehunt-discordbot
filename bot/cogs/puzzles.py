@@ -424,8 +424,8 @@ class Puzzles(BaseCog):
 • `!solve SOLUTION` will mark this puzzle as solved and archive this channel to #solved-puzzles
 • `!link <url>` will update the link to the puzzle on the hunt website
 • `!doc <url>` will update the Google Drive link
-• `!name <url>` will update the Google Drive link
-* `!info` will re-post this message
+• `!name <name>` will update the puzle name
+• `!info` will re-post this message
 • `!delete` should *only* be used if a channel was mistakenly created.
 • `!type crossword` will mark the type of the puzzle, for others to know
 • `!priority high` will mark the priority of the puzzle, for others to know
@@ -572,14 +572,12 @@ class Puzzles(BaseCog):
 
     @commands.command()
     async def name(self, ctx, *, name: Optional[str]):
-        if name is None:
-            await ctx.send(f":exclamation: New name should be provided, try `!name <new_name>`")
-            return
-
-        name = self.clean_name(name)
+        """*Show or update puzzle name*"""
+        if name:
+            name = self.clean_name(name)
         puzzle_data = await self.update_puzzle_attr_by_command(ctx, "name", name, reply=False)
         if puzzle_data:
-            await ctx.channel.edit(name=name)
+            await ctx.channel.edit(name=name) if name else None
             await self.send_state(
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if name else None
             )
