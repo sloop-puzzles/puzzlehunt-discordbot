@@ -604,6 +604,28 @@ class Puzzles(BaseCog):
                 ctx.channel, puzzle_data, description=":white_check_mark: I've updated:" if priority else None
             )
 
+    @commands.command()
+    async def reset(self, ctx, *, field_name: str):
+        """*Clear a puzzle field, e.g. link, doc, status, type, priority*"""
+        valid_fields = ["link", "doc", "status", "type", "priority", "name"]
+        if field_name not in valid_fields:
+            await ctx.send(f":exclamation: Field name should be one of {valid_fields}, got \"{field_name}\"")
+            return
+
+        attr_map = {
+            "link": "hunt_url",
+            "doc": "google_sheet_id",
+            "status": "status",
+            "type": "puzzle_type",
+            "priority": "priority",
+            "name": "name",
+        }
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, attr_map[field_name], None, reply=False)
+
+        if puzzle_data:
+            await self.send_state(ctx.channel, puzzle_data, description=":white_check_mark: I've updated:")
+
+
     # Currently not very useful, resources also posted in Quick Links worksheet
     # @commands.command(aliases=["res"])
     # async def resources(self, ctx):
