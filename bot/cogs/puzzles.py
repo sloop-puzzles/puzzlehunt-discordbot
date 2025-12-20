@@ -457,7 +457,7 @@ class Puzzles(BaseCog):
 
         await self.send_initial_puzzle_channel_messages(ctx.channel)
 
-    async def update_puzzle_attr_by_command(self, ctx, attr, value, message=None, reply=True, clear=False):
+    async def update_puzzle_attr_by_command(self, ctx, attr, value, message=None, reply=True):
         """Common pattern where we want to update a single field in PuzzleData based on command"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
@@ -465,10 +465,27 @@ class Puzzles(BaseCog):
             return
 
         message = message or attr
-        if value or clear:
+        if value:
             setattr(puzzle_data, attr, value)
             PuzzleJsonDb.commit(puzzle_data)
             message = "Updated! " + message
+
+        if reply:
+            embed = discord.Embed(description=f"""{message}: {getattr(puzzle_data, attr)}""")
+            await ctx.send(embed=embed)
+        return puzzle_data
+
+    async def unset_puzzle_attr_by_command(self, ctx, attr, message=None, reply=True):
+        """Common pattern where we want to update a single field in PuzzleData based on command"""
+        puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
+        if not puzzle_data:
+            await self.send_not_puzzle_channel(ctx)
+            return
+
+        message = message or attr
+        delattr(puzzle_data, attr)
+        PuzzleJsonDb.commit(puzzle_data)
+        message = "Updated! " + message
 
         if reply:
             embed = discord.Embed(description=f"""{message}: {getattr(puzzle_data, attr)}""")
@@ -620,7 +637,7 @@ class Puzzles(BaseCog):
             "priority": "priority",
             "name": "name",
         }
-        puzzle_data = await self.update_puzzle_attr_by_command(ctx, attr_map[field_name], None, reply=False, clear=True)
+        puzzle_data = await self.unset_puzzle_attr_by_command(ctx, attr_map[field_name], reply=False)
 
         if puzzle_data:
             await self.send_state(
