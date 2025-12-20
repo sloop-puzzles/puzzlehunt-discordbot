@@ -11,7 +11,7 @@ pylint = "*"
 [packages]
 "discord.py" = "*"
 alembic = "*"
-gino = "*"
+gino = "1.0.1"
 # psycopg2 = "*"  # not currently used
 dataclasses-json = "*"
 pytz = "*"
