@@ -457,7 +457,7 @@ class Puzzles(BaseCog):
 
         await self.send_initial_puzzle_channel_messages(ctx.channel)
 
-    async def update_puzzle_attr_by_command(self, ctx, attr, value, message=None, reply=True):
+    async def update_puzzle_attr_by_command(self, ctx, attr, value, message=None, reply=True, clear=False):
         """Common pattern where we want to update a single field in PuzzleData based on command"""
         puzzle_data = self.get_puzzle_data_from_channel(ctx.channel)
         if not puzzle_data:
@@ -465,7 +465,7 @@ class Puzzles(BaseCog):
             return
 
         message = message or attr
-        if value:
+        if value or clear:
             setattr(puzzle_data, attr, value)
             PuzzleJsonDb.commit(puzzle_data)
             message = "Updated! " + message
@@ -620,10 +620,12 @@ class Puzzles(BaseCog):
             "priority": "priority",
             "name": "name",
         }
-        puzzle_data = await self.update_puzzle_attr_by_command(ctx, attr_map[field_name], None, reply=False)
+        puzzle_data = await self.update_puzzle_attr_by_command(ctx, attr_map[field_name], None, reply=False, clear=True)
 
         if puzzle_data:
-            await self.send_state(ctx.channel, puzzle_data, description=":white_check_mark: I've updated:")
+            await self.send_state(
+                ctx.channel, puzzle_data, description=":white_check_mark: I've updated:"
+                )
 
 
     # Currently not very useful, resources also posted in Quick Links worksheet
