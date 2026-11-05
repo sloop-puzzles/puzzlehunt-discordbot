@@ -1,4 +1,4 @@
-# Discord Bot for Sloopertroup
+# Discord Bot for Sloopertroop
 This is a fork of a [bot originally by Ladder Dogs](https://github.com/azjps/ladder_dogs_discord_bot)
 
 Simple discord bot which manages puzzle channels for puzzle hunts via discord commands, used by a small-to-medium sized team.
